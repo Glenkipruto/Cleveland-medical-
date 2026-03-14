@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Students | Cleveland Medical College</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+    <style>
+        .btn-primary { background:var(--navy);color:white;border:none;padding:10px 20px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:0.875rem;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px; }
+        .btn-primary:hover{background:var(--navy-lt);}
+        .btn-danger{background:#fee2e2;color:#991b1b;border:none;padding:5px 12px;border-radius:6px;font-size:0.75rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;}
+        .btn-view{background:#eff6ff;color:#1e40af;border:none;padding:5px 12px;border-radius:6px;font-size:0.75rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;text-decoration:none;}
+        .search-input{flex:1;padding:10px 16px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;}
+        .search-input:focus{border-color:var(--navy);}
+        .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;align-items:center;justify-content:center;}
+        .modal-overlay.open{display:flex;}
+        .modal{background:white;border-radius:16px;padding:32px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);animation:popIn .25s ease;}
+        @keyframes popIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
+        .modal-title{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--navy);margin-bottom:20px;}
+        .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+        .form-field{display:flex;flex-direction:column;gap:5px;}
+        .form-field.full{grid-column:1/-1;}
+        .form-field label{font-size:0.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
+        .form-field input,.form-field select{padding:10px 12px;border:1px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:0.875rem;outline:none;}
+        .form-field input:focus,.form-field select:focus{border-color:var(--navy);}
+        .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:22px;}
+        .btn-cancel{background:#f1f5f9;border:1px solid var(--border);color:var(--text);padding:9px 18px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.875rem;}
+        .progress-bar{height:6px;background:#e2e8f0;border-radius:999px;overflow:hidden;margin-top:4px;}
+        .progress-fill{height:100%;background:var(--navy);border-radius:999px;}
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon">CMC</div>
+        <div><div class="brand-name">Cleveland</div><div class="brand-sub">Medical College</div></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="{{ url_for('admin_dashboard') }}" class="nav-item "><span class="nav-icon">⊞</span> Dashboard</a>
+        <a href="{{ url_for('manage_staff') }}" class="nav-item "><span class="nav-icon">👥</span> Staff Management</a>
+        <a href="{{ url_for('students') }}" class="nav-item active"><span class="nav-icon">🎓</span> Students</a>
+        <div class="nav-section-label">Finance</div>
+        <a href="{{ url_for('tuition_payments') }}" class="nav-item "><span class="nav-icon">💰</span> Tuition & Payments</a>
+        <a href="{{ url_for('accounts_receivable') }}" class="nav-item "><span class="nav-icon">📥</span> Accounts Receivable</a>
+        <a href="{{ url_for('accounts_payable') }}" class="nav-item "><span class="nav-icon">📤</span> Accounts Payable</a>
+        <a href="{{ url_for('cash_and_bank') }}" class="nav-item "><span class="nav-icon">🏦</span> Cash & Bank</a>
+        <a href="{{ url_for('grants_donations') }}" class="nav-item "><span class="nav-icon">🎁</span> Grants & Donations</a>
+        <a href="{{ url_for('payroll') }}" class="nav-item "><span class="nav-icon">💼</span> Payroll</a>
+        <div class="nav-section-label">Operations</div>
+        <a href="{{ url_for('inventory') }}" class="nav-item "><span class="nav-icon">📦</span> Inventory</a>
+        <a href="{{ url_for('reports') }}" class="nav-item "><span class="nav-icon">📊</span> Reports</a>
+        <a href="{{ url_for('settings') }}" class="nav-item "><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ session.get('username','AD')[0] }}</div>
+            <div>
+                <div class="user-name">{{ session.get('username','Administrator') }}</div>
+                <div class="user-role">{{ session.get('role','') | replace('_','  ') | title }}</div>
+            </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+</aside>
+
+<main class="main">
+    <header class="topbar">
+        <div>
+            <h1 class="page-title">Students</h1>
+            <p class="page-subtitle">Manage student records and enrolment</p>
+        </div>
+        <button class="btn-primary" onclick="document.getElementById('modalOverlay').classList.add('open')">➕ Add Student</button>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for category, message in messages %}
+        <div class="flash-msg" style="{% if category=='success'%}background:#dcfce7;border-color:#86efac;color:#166534;{% endif %}">{{ message }}</div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="table-card">
+        <div style="display:flex;gap:12px;margin-bottom:18px;">
+            <input type="text" class="search-input" id="searchInput" placeholder="🔍  Search students..." onkeyup="filterTable()">
+        </div>
+        <table class="data-table" id="studentsTable">
+            <thead>
+                <tr><th>Student ID</th><th>Full Name</th><th>Program</th><th>Year</th><th>Fee Balance</th><th>Status</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+                {% if students %}
+                    {% for s in students %}
+                    <tr>
+                        <td><strong>{{ s.student_id }}</strong></td>
+                        <td>{{ s.full_name }}</td>
+                        <td>{{ s.program }}</td>
+                        <td>Year {{ s.year }}</td>
+                        <td>
+                            KSh {{ "{:,.0f}".format(s.balance) }}
+                            <div class="progress-bar"><div class="progress-fill" style="width:{{ [((s.amount_paid / s.tuition_fee)*100) if s.tuition_fee > 0 else 0, 100]|min }}%"></div></div>
+                        </td>
+                        <td><span class="status status--{{ 'paid' if s.balance==0 else 'pending' }}">{{ 'Paid' if s.balance==0 else 'Owing' }}</span></td>
+                        <td style="display:flex;gap:6px;">
+                            <a href="{{ url_for('student_profile', student_id=s.id) }}" class="btn-view">View</a>
+                            {% if session.get('role')=='admin' %}
+                            <form method="POST" action="{{ url_for('delete_student', student_id=s.id) }}" onsubmit="return confirm('Delete {{ s.full_name }}?')">
+                                <button type="submit" class="btn-danger">Delete</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="7" class="empty-state">No students enrolled yet.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target.id==='modalOverlay') this.classList.remove('open')">
+    <div class="modal">
+        <div class="modal-title">🎓 Enrol New Student</div>
+        <form method="POST" action="{{ url_for('add_student') }}">
+            <div class="form-grid">
+                <div class="form-field"><label>Student ID</label><input type="text" name="student_id" placeholder="e.g. CMC-2026-001" required></div>
+                <div class="form-field"><label>First Name</label><input type="text" name="first_name" required></div>
+                <div class="form-field"><label>Last Name</label><input type="text" name="last_name" required></div>
+                <div class="form-field"><label>Date of Birth</label><input type="date" name="dob"></div>
+                <div class="form-field"><label>National ID</label><input type="text" name="national_id"></div>
+                <div class="form-field"><label>Phone</label><input type="text" name="phone"></div>
+                <div class="form-field"><label>Email</label><input type="email" name="email"></div>
+                <div class="form-field"><label>Program</label>
+                    <select name="program" required>
+                        <option value="" disabled selected>Select program...</option>
+                        <option>Clinical Medicine</option>
+                        <option>Nursing</option>
+                        <option>Medical Laboratory</option>
+                        <option>Pharmacy</option>
+                        <option>Health Records</option>
+                        <option>Nutrition & Dietetics</option>
+                    </select>
+                </div>
+                <div class="form-field"><label>Year of Study</label>
+                    <select name="year">
+                        <option value="1">Year 1</option><option value="2">Year 2</option>
+                        <option value="3">Year 3</option><option value="4">Year 4</option>
+                    </select>
+                </div>
+                <div class="form-field"><label>Intake Year</label><input type="number" name="intake_year" value="2026"></div>
+                <div class="form-field"><label>Tuition Fee (KSh)</label><input type="number" name="tuition_fee" step="0.01" placeholder="e.g. 120000"></div>
+                <div class="form-field"><label>Amount Paid (KSh)</label><input type="number" name="amount_paid" step="0.01" value="0"></div>
+                <div class="form-field full"><label>Status</label>
+                    <select name="status">
+                        <option value="Active">Active</option>
+                        <option value="Deferred">Deferred</option>
+                        <option value="Graduated">Graduated</option>
+                        <option value="Suspended">Suspended</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="document.getElementById('modalOverlay').classList.remove('open')">Cancel</button>
+                <button type="submit" class="btn-primary">💾 Enrol Student</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function filterTable() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    document.querySelectorAll('#studentsTable tbody tr').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | Cleveland Medical College</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon">CMC</div>
+        <div><div class="brand-name">Cleveland</div><div class="brand-sub">Medical College</div></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="{{ url_for('admin_dashboard') }}" class="nav-item active"><span class="nav-icon">⊞</span> Dashboard</a>
+        <a href="{{ url_for('manage_staff') }}" class="nav-item "><span class="nav-icon">👥</span> Staff Management</a>
+        <a href="{{ url_for('students') }}" class="nav-item "><span class="nav-icon">🎓</span> Students</a>
+        <div class="nav-section-label">Finance</div>
+        <a href="{{ url_for('tuition_payments') }}" class="nav-item "><span class="nav-icon">💰</span> Tuition & Payments</a>
+        <a href="{{ url_for('accounts_receivable') }}" class="nav-item "><span class="nav-icon">📥</span> Accounts Receivable</a>
+        <a href="{{ url_for('accounts_payable') }}" class="nav-item "><span class="nav-icon">📤</span> Accounts Payable</a>
+        <a href="{{ url_for('cash_and_bank') }}" class="nav-item "><span class="nav-icon">🏦</span> Cash & Bank</a>
+        <a href="{{ url_for('grants_donations') }}" class="nav-item "><span class="nav-icon">🎁</span> Grants & Donations</a>
+        <a href="{{ url_for('payroll') }}" class="nav-item "><span class="nav-icon">💼</span> Payroll</a>
+        <div class="nav-section-label">Operations</div>
+        <a href="{{ url_for('inventory') }}" class="nav-item "><span class="nav-icon">📦</span> Inventory</a>
+        <a href="{{ url_for('reports') }}" class="nav-item "><span class="nav-icon">📊</span> Reports</a>
+        <a href="{{ url_for('settings') }}" class="nav-item "><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ session.get('username','AD')[0] }}</div>
+            <div>
+                <div class="user-name">{{ session.get('username','Administrator') }}</div>
+                <div class="user-role">{{ session.get('role','') | replace('_','  ') | title }}</div>
+            </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+</aside>
+
+<main class="main">
+
+    <header class="topbar">
+        <div>
+            <h1 class="page-title">Dashboard Overview</h1>
+            <p class="page-subtitle">Financial summary · Cleveland Medical College</p>
+        </div>
+        <div class="topbar-right">
+            <div class="date-badge" id="live-date"></div>
+            <button class="action-btn" onclick="window.print()">Export Report</button>
+        </div>
+    </header>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+            <div class="flash-msg">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <section class="cards-grid">
+        <div class="card card--blue" style="animation-delay:0s">
+            <div class="card-label">Total Revenue</div>
+            <div class="card-value">KSh {{ "{:,.2f}".format(total_revenue or 0) }}</div>
+            <div class="card-detail">Tuition · Grants · Donations</div>
+            <div class="card-icon">💰</div>
+        </div>
+        <div class="card card--red" style="animation-delay:.08s">
+            <div class="card-label">Total Expenses</div>
+            <div class="card-value">KSh {{ "{:,.2f}".format(total_expenses or 0) }}</div>
+            <div class="card-detail">Salaries · Supplies · Utilities</div>
+            <div class="card-icon">📤</div>
+        </div>
+        <div class="card card--green" style="animation-delay:.16s">
+            <div class="card-label">Accounts Receivable</div>
+            <div class="card-value">KSh {{ "{:,.2f}".format(total_ar or 0) }}</div>
+            <div class="card-detail">Money owed TO the college</div>
+            <div class="card-icon">📥</div>
+        </div>
+        <div class="card card--orange" style="animation-delay:.24s">
+            <div class="card-label">Accounts Payable</div>
+            <div class="card-value">KSh {{ "{:,.2f}".format(total_ap or 0) }}</div>
+            <div class="card-detail">Money owed BY the college</div>
+            <div class="card-icon">🧾</div>
+        </div>
+        <div class="card card--teal" style="animation-delay:.32s">
+            <div class="card-label">Bank Balance</div>
+            <div class="card-value">KSh {{ "{:,.2f}".format(bank_balance or 0) }}</div>
+            <div class="card-detail">Cash &amp; bank combined</div>
+            <div class="card-icon">🏦</div>
+        </div>
+        <div class="card card--purple" style="animation-delay:.4s">
+            <div class="card-label">Payroll This Month</div>
+            <div class="card-value">KSh {{ "{:,.2f}".format(payroll_total or 0) }}</div>
+            <div class="card-detail">{{ staff_count or 0 }} staff members</div>
+            <div class="card-icon">💼</div>
+        </div>
+    </section>
+
+    <section class="charts-row">
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title">Revenue vs Expenses</div>
+                <div class="chart-subtitle">Last 6 months</div>
+            </div>
+            <canvas id="revenueChart" height="220"></canvas>
+        </div>
+        <div class="chart-card">
+            <div class="chart-header">
+                <div class="chart-title">Revenue Breakdown</div>
+                <div class="chart-subtitle">By source</div>
+            </div>
+            <canvas id="breakdownChart" height="220"></canvas>
+        </div>
+    </section>
+
+    <section class="bottom-row">
+        <div class="table-card">
+            <div class="table-header">
+                <div class="chart-title">Recent Transactions</div>
+                <a href="{{ url_for('tuition_payments') }}" class="view-all">View All →</a>
+            </div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if recent_transactions %}
+                        {% for t in recent_transactions %}
+                        <tr>
+                            <td>{{ t.date }}</td>
+                            <td>{{ t.description }}</td>
+                            <td><span class="tag tag--{{ t.type }}">{{ t.type }}</span></td>
+                            <td class="amount">KSh {{ "{:,.2f}".format(t.amount) }}</td>
+                            <td><span class="status status--{{ t.status }}">{{ t.status }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="empty-state">No transactions recorded yet</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="right-col">
+            <div class="alert-card">
+                <div class="chart-title" style="margin-bottom:14px">⚠️ Inventory Alerts</div>
+                {% if low_stock %}
+                    {% for item in low_stock %}
+                    <div class="alert-item">
+                        <span>{{ item.name }}</span>
+                        <span class="alert-qty">{{ item.quantity }} left</span>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">All stock levels are healthy ✓</div>
+                {% endif %}
+            </div>
+
+            <div class="alert-card">
+                <div class="chart-title" style="margin-bottom:14px">Quick Actions</div>
+                <div class="quick-actions">
+                    <button class="q-btn" onclick="window.location='{{ url_for('students') }}'">➕ Add Student</button>
+                    <button class="q-btn" onclick="window.location='{{ url_for('tuition_payments') }}'">💳 Record Payment</button>
+                    <button class="q-btn" onclick="window.location='{{ url_for('manage_staff') }}'">👤 Add Staff</button>
+                    <button class="q-btn" onclick="window.location='{{ url_for('inventory') }}'">📦 Update Inventory</button>
+                    <button class="q-btn" onclick="window.location='{{ url_for('reports') }}'">📊 Generate Report</button>
+                    <button class="q-btn" onclick="window.location='{{ url_for('accounts_payable') }}'">💰 Record Expense</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<script>
+document.getElementById('live-date').textContent = new Date().toLocaleDateString('en-US', {
+    weekday:'long', year:'numeric', month:'long', day:'numeric'
+});
+
+const ctx1 = document.getElementById('revenueChart').getContext('2d');
+new Chart(ctx1, {
+    type: 'bar',
+    data: {
+        labels: ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'],
+        datasets: [
+            { label: 'Revenue', data: [0,0,0,0,0,0], backgroundColor: 'rgba(0,51,102,0.85)', borderRadius: 6 },
+            { label: 'Expenses', data: [0,0,0,0,0,0], backgroundColor: 'rgba(192,57,43,0.75)', borderRadius: 6 }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { position: 'top' } },
+        scales: { y: { beginAtZero: true, ticks: { callback: v => 'KSh ' + v.toLocaleString() } } }
+    }
+});
+
+const ctx2 = document.getElementById('breakdownChart').getContext('2d');
+new Chart(ctx2, {
+    type: 'doughnut',
+    data: {
+        labels: ['Tuition', 'Grants', 'Donations'],
+        datasets: [{
+            data: [{{ tuition_total or 0 }}, {{ grants_total or 0 }}, {{ donations_total or 0 }}],
+            backgroundColor: ['#003366', '#1a7a4a', '#c0392b'],
+            borderWidth: 0,
+            hoverOffset: 8
+        }]
+    },
+    options: {
+        responsive: true,
+        cutout: '65%',
+        plugins: { legend: { position: 'bottom' } }
+    }
+});
+</script>
+
+</body>
+</html>

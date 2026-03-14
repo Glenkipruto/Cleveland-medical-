@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory | Cleveland Medical College</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+    <style>
+        .search-input{flex:1;padding:10px 16px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;transition:border .2s;}
+        .search-input:focus{border-color:var(--navy);}
+        .btn-primary{background:var(--navy);color:white;border:none;padding:10px 20px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:0.875rem;font-weight:600;cursor:pointer;transition:background .18s;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+        .btn-primary:hover{background:var(--navy-lt);}
+        .btn-warning{background:#fef9c3;color:#854d0e;border:none;padding:5px 12px;border-radius:6px;font-size:0.75rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;}
+        .btn-danger{background:#fee2e2;color:#991b1b;border:none;padding:5px 12px;border-radius:6px;font-size:0.75rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;}
+        .btn-success{background:#dcfce7;color:#166534;border:none;padding:5px 12px;border-radius:6px;font-size:0.75rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;}
+        .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;align-items:center;justify-content:center;}
+        .modal-overlay.open{display:flex;}
+        .modal{background:white;border-radius:16px;padding:32px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);animation:popIn .25s ease;}
+        @keyframes popIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
+        .modal-title{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--navy);margin-bottom:20px;}
+        .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+        .form-field{display:flex;flex-direction:column;gap:5px;}
+        .form-field.full{grid-column:1/-1;}
+        .form-field label{font-size:0.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
+        .form-field input,.form-field select{padding:10px 12px;border:1px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:0.875rem;outline:none;transition:border .2s;}
+        .form-field input:focus,.form-field select:focus{border-color:var(--navy);}
+        .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:22px;}
+        .btn-cancel{background:#f1f5f9;border:1px solid var(--border);color:var(--text);padding:9px 18px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.875rem;}
+        .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+        .stat-mini{background:white;border-radius:10px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.06);border-left:3px solid var(--navy);}
+        .stat-mini-label{font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;}
+        .stat-mini-val{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--text);font-weight:700;}
+        .tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--border);}
+        .tab{padding:10px 20px;font-size:0.875rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .18s;}
+        .tab.active{color:var(--navy);border-bottom-color:var(--navy);}
+        .tab-content{display:none;}
+        .tab-content.active{display:block;}
+        .stock-ok{color:#166534;font-weight:700;}
+        .stock-low{color:#854d0e;font-weight:700;}
+        .stock-out{color:#991b1b;font-weight:700;}
+        .stock-bar{height:6px;background:#e2e8f0;border-radius:999px;overflow:hidden;margin-top:4px;width:80px;}
+        .stock-fill{height:100%;border-radius:999px;}
+        .cat-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:600;}
+        .cat-medical{background:#dbeafe;color:#1e40af;}
+        .cat-stationery{background:#fef9c3;color:#854d0e;}
+        .cat-equipment{background:#ede9fe;color:#4c1d95;}
+        .cat-cleaning{background:#dcfce7;color:#166534;}
+        .cat-other{background:#f1f5f9;color:#475569;}
+        .topbar-actions{display:flex;gap:10px;}
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon">CMC</div>
+        <div><div class="brand-name">Cleveland</div><div class="brand-sub">Medical College</div></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="{{ url_for('admin_dashboard') }}" class="nav-item "><span class="nav-icon">⊞</span> Dashboard</a>
+        <a href="{{ url_for('manage_staff') }}" class="nav-item "><span class="nav-icon">👥</span> Staff Management</a>
+        <a href="{{ url_for('students') }}" class="nav-item "><span class="nav-icon">🎓</span> Students</a>
+        <div class="nav-section-label">Finance</div>
+        <a href="{{ url_for('tuition_payments') }}" class="nav-item "><span class="nav-icon">💰</span> Tuition & Payments</a>
+        <a href="{{ url_for('accounts_receivable') }}" class="nav-item "><span class="nav-icon">📥</span> Accounts Receivable</a>
+        <a href="{{ url_for('accounts_payable') }}" class="nav-item "><span class="nav-icon">📤</span> Accounts Payable</a>
+        <a href="{{ url_for('cash_and_bank') }}" class="nav-item "><span class="nav-icon">🏦</span> Cash & Bank</a>
+        <a href="{{ url_for('grants_donations') }}" class="nav-item "><span class="nav-icon">🎁</span> Grants & Donations</a>
+        <a href="{{ url_for('payroll') }}" class="nav-item "><span class="nav-icon">💼</span> Payroll</a>
+        <div class="nav-section-label">Operations</div>
+        <a href="{{ url_for('inventory') }}" class="nav-item active"><span class="nav-icon">📦</span> Inventory</a>
+        <a href="{{ url_for('reports') }}" class="nav-item "><span class="nav-icon">📊</span> Reports</a>
+        <a href="{{ url_for('settings') }}" class="nav-item "><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ session.get('username','AD')[0] }}</div>
+            <div>
+                <div class="user-name">{{ session.get('username','Administrator') }}</div>
+                <div class="user-role">{{ session.get('role','') | replace('_','  ') | title }}</div>
+            </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+</aside>
+
+<main class="main">
+
+    <header class="topbar">
+        <div>
+            <h1 class="page-title">Inventory</h1>
+            <p class="page-subtitle">Track stock levels, supplies and equipment</p>
+        </div>
+        <div class="topbar-actions">
+            <button class="btn-primary" onclick="openModal('add')">➕ Add Item</button>
+        </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for category, message in messages %}
+        <div class="flash-msg" style="{% if category=='success'%}background:#dcfce7;border-color:#86efac;color:#166534;{% endif %}">{{ message }}</div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <!-- Stats -->
+    <div class="stats-row">
+        <div class="stat-mini">
+            <div class="stat-mini-label">Total Items</div>
+            <div class="stat-mini-val">{{ total_items }}</div>
+        </div>
+        <div class="stat-mini" style="border-left-color:var(--green)">
+            <div class="stat-mini-label">Total Stock Value</div>
+            <div class="stat-mini-val">KSh {{ "{:,.0f}".format(total_value) }}</div>
+        </div>
+        <div class="stat-mini" style="border-left-color:var(--orange)">
+            <div class="stat-mini-label">Low Stock Items</div>
+            <div class="stat-mini-val">{{ low_stock_count }}</div>
+        </div>
+        <div class="stat-mini" style="border-left-color:var(--red)">
+            <div class="stat-mini-label">Out of Stock</div>
+            <div class="stat-mini-val">{{ out_of_stock }}</div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('all', this)">All Items</div>
+        <div class="tab" onclick="switchTab('low', this)">⚠️ Low Stock</div>
+        <div class="tab" onclick="switchTab('out', this)">🔴 Out of Stock</div>
+    </div>
+
+    <!-- TAB 1: All Items -->
+    <div class="tab-content active" id="tab-all">
+        <div class="table-card">
+            <div style="display:flex;gap:12px;margin-bottom:18px;">
+                <input type="text" class="search-input" id="s1" placeholder="🔍  Search inventory..." onkeyup="filterTable('t1','s1')">
+            </div>
+            <table class="data-table" id="t1">
+                <thead>
+                    <tr><th>Item Name</th><th>Category</th><th>Quantity</th><th>Unit Price</th><th>Total Value</th><th>Reorder Level</th><th>Stock Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                    {% if items %}
+                        {% for item in items %}
+                        {% set pct = [(item.quantity / item.reorder_level * 50) if item.reorder_level > 0 else 100, 100]|min %}
+                        <tr>
+                            <td><strong>{{ item.name }}</strong></td>
+                            <td><span class="cat-badge cat-{{ item.category | lower }}">{{ item.category }}</span></td>
+                            <td>
+                                <span class="{{ 'stock-out' if item.quantity == 0 else 'stock-low' if item.quantity <= item.reorder_level else 'stock-ok' }}">
+                                    {{ item.quantity }} {{ item.unit }}
+                                </span>
+                                <div class="stock-bar">
+                                    <div class="stock-fill" style="width:{{ pct }}%;background:{{ '#991b1b' if item.quantity==0 else '#f59e0b' if item.quantity<=item.reorder_level else '#22c55e' }}"></div>
+                                </div>
+                            </td>
+                            <td>KSh {{ "{:,.2f}".format(item.unit_price) }}</td>
+                            <td>KSh {{ "{:,.2f}".format(item.quantity * item.unit_price) }}</td>
+                            <td>{{ item.reorder_level }} {{ item.unit }}</td>
+                            <td>
+                                {% if item.quantity == 0 %}
+                                    <span class="status status--pending">Out of Stock</span>
+                                {% elif item.quantity <= item.reorder_level %}
+                                    <span class="status" style="background:#fef9c3;color:#854d0e;">Low Stock</span>
+                                {% else %}
+                                    <span class="status status--paid">In Stock</span>
+                                {% endif %}
+                            </td>
+                            <td style="display:flex;gap:6px;">
+                                <button class="btn-success" onclick="openRestock({{ item.id }}, '{{ item.name }}', {{ item.quantity }})">+ Restock</button>
+                                <button class="btn-warning" onclick="openEdit({{ item.id }}, '{{ item.name }}', '{{ item.category }}', {{ item.quantity }}, {{ item.unit_price }}, {{ item.reorder_level }}, '{{ item.unit }}')">Edit</button>
+                                <form method="POST" action="{{ url_for('delete_inventory', item_id=item.id) }}"
+                                      onsubmit="return confirm('Delete {{ item.name }}?')">
+                                    <button type="submit" class="btn-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="8" class="empty-state">No inventory items yet.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 2: Low Stock -->
+    <div class="tab-content" id="tab-low">
+        <div class="table-card">
+            <table class="data-table">
+                <thead><tr><th>Item</th><th>Category</th><th>Current Qty</th><th>Reorder Level</th><th>Unit Price</th><th>Action</th></tr></thead>
+                <tbody>
+                    {% set low_items = [] %}
+                    {% for item in items %}
+                        {% if item.quantity <= item.reorder_level and item.quantity > 0 %}
+                            {% set _ = low_items.append(item) %}
+                        {% endif %}
+                    {% endfor %}
+                    {% if low_items %}
+                        {% for item in low_items %}
+                        <tr>
+                            <td><strong>{{ item.name }}</strong></td>
+                            <td><span class="cat-badge cat-{{ item.category | lower }}">{{ item.category }}</span></td>
+                            <td class="stock-low">{{ item.quantity }} {{ item.unit }}</td>
+                            <td>{{ item.reorder_level }} {{ item.unit }}</td>
+                            <td>KSh {{ "{:,.2f}".format(item.unit_price) }}</td>
+                            <td><button class="btn-success" onclick="openRestock({{ item.id }}, '{{ item.name }}', {{ item.quantity }})">+ Restock</button></td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="6" class="empty-state">No low stock items ✓</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 3: Out of Stock -->
+    <div class="tab-content" id="tab-out">
+        <div class="table-card">
+            <table class="data-table">
+                <thead><tr><th>Item</th><th>Category</th><th>Unit Price</th><th>Action</th></tr></thead>
+                <tbody>
+                    {% set out = items | selectattr('quantity', 'equalto', 0) | list %}
+                    {% if out %}
+                        {% for item in out %}
+                        <tr>
+                            <td><strong>{{ item.name }}</strong></td>
+                            <td><span class="cat-badge cat-{{ item.category | lower }}">{{ item.category }}</span></td>
+                            <td>KSh {{ "{:,.2f}".format(item.unit_price) }}</td>
+                            <td><button class="btn-success" onclick="openRestock({{ item.id }}, '{{ item.name }}', 0)">+ Restock</button></td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="4" class="empty-state">No out of stock items ✓</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<!-- ADD ITEM MODAL -->
+<div class="modal-overlay" id="addModal" onclick="if(event.target.id==='addModal') this.classList.remove('open')">
+    <div class="modal">
+        <div class="modal-title">📦 Add Inventory Item</div>
+        <form method="POST" action="{{ url_for('add_inventory') }}">
+            <div class="form-grid">
+                <div class="form-field full">
+                    <label>Item Name</label>
+                    <input type="text" name="name" placeholder="e.g. Surgical Gloves" required>
+                </div>
+                <div class="form-field">
+                    <label>Category</label>
+                    <select name="category" required>
+                        <option value="" disabled selected>Select...</option>
+                        <option value="Medical">Medical</option>
+                        <option value="Stationery">Stationery</option>
+                        <option value="Equipment">Equipment</option>
+                        <option value="Cleaning">Cleaning</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label>Unit</label>
+                    <input type="text" name="unit" placeholder="e.g. boxes, pcs, kg" value="pcs">
+                </div>
+                <div class="form-field">
+                    <label>Quantity</label>
+                    <input type="number" name="quantity" placeholder="e.g. 100" required min="0">
+                </div>
+                <div class="form-field">
+                    <label>Unit Price (KSh)</label>
+                    <input type="number" name="unit_price" placeholder="e.g. 500" step="0.01" required>
+                </div>
+                <div class="form-field">
+                    <label>Reorder Level</label>
+                    <input type="number" name="reorder_level" placeholder="e.g. 20" value="10">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="document.getElementById('addModal').classList.remove('open')">Cancel</button>
+                <button type="submit" class="btn-primary">💾 Add Item</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- RESTOCK MODAL -->
+<div class="modal-overlay" id="restockModal" onclick="if(event.target.id==='restockModal') this.classList.remove('open')">
+    <div class="modal">
+        <div class="modal-title">📥 Restock Item</div>
+        <form method="POST" action="{{ url_for('restock_inventory') }}">
+            <input type="hidden" name="item_id" id="restockId">
+            <div class="form-field" style="margin-bottom:14px;">
+                <label>Item</label>
+                <input type="text" id="restockName" readonly style="background:#f8fafc;">
+            </div>
+            <div class="form-field" style="margin-bottom:14px;">
+                <label>Current Quantity</label>
+                <input type="text" id="restockCurrent" readonly style="background:#f8fafc;">
+            </div>
+            <div class="form-field" style="margin-bottom:14px;">
+                <label>Add Quantity</label>
+                <input type="number" name="add_quantity" placeholder="e.g. 50" required min="1">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="document.getElementById('restockModal').classList.remove('open')">Cancel</button>
+                <button type="submit" class="btn-primary">📥 Restock</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModal" onclick="if(event.target.id==='editModal') this.classList.remove('open')">
+    <div class="modal">
+        <div class="modal-title">✏️ Edit Item</div>
+        <form method="POST" action="{{ url_for('edit_inventory') }}">
+            <input type="hidden" name="item_id" id="editId">
+            <div class="form-grid">
+                <div class="form-field full">
+                    <label>Item Name</label>
+                    <input type="text" name="name" id="editName" required>
+                </div>
+                <div class="form-field">
+                    <label>Category</label>
+                    <select name="category" id="editCategory">
+                        <option value="Medical">Medical</option>
+                        <option value="Stationery">Stationery</option>
+                        <option value="Equipment">Equipment</option>
+                        <option value="Cleaning">Cleaning</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label>Unit</label>
+                    <input type="text" name="unit" id="editUnit">
+                </div>
+                <div class="form-field">
+                    <label>Quantity</label>
+                    <input type="number" name="quantity" id="editQty" min="0">
+                </div>
+                <div class="form-field">
+                    <label>Unit Price (KSh)</label>
+                    <input type="number" name="unit_price" id="editPrice" step="0.01">
+                </div>
+                <div class="form-field">
+                    <label>Reorder Level</label>
+                    <input type="number" name="reorder_level" id="editReorder">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="document.getElementById('editModal').classList.remove('open')">Cancel</button>
+                <button type="submit" class="btn-primary">💾 Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openModal(type) { document.getElementById('addModal').classList.add('open'); }
+
+function openRestock(id, name, current) {
+    document.getElementById('restockId').value      = id;
+    document.getElementById('restockName').value    = name;
+    document.getElementById('restockCurrent').value = current;
+    document.getElementById('restockModal').classList.add('open');
+}
+
+function openEdit(id, name, category, qty, price, reorder, unit) {
+    document.getElementById('editId').value       = id;
+    document.getElementById('editName').value     = name;
+    document.getElementById('editCategory').value = category;
+    document.getElementById('editQty').value      = qty;
+    document.getElementById('editPrice').value    = price;
+    document.getElementById('editReorder').value  = reorder;
+    document.getElementById('editUnit').value     = unit;
+    document.getElementById('editModal').classList.add('open');
+}
+
+function switchTab(name, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    el.classList.add('active');
+}
+function filterTable(tableId, inputId) {
+    const q = document.getElementById(inputId).value.toLowerCase();
+    document.querySelectorAll('#' + tableId + ' tbody tr').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+</script>
+</body>
+</html>

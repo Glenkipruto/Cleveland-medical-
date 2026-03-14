@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payroll | Cleveland Medical College</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+    <style>
+        .search-input{flex:1;padding:10px 16px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;transition:border .2s;}
+        .search-input:focus{border-color:var(--navy);}
+        .btn-primary{background:var(--navy);color:white;border:none;padding:10px 20px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:0.875rem;font-weight:600;cursor:pointer;transition:background .18s;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+        .btn-primary:hover{background:var(--navy-lt);}
+        .btn-success{background:#dcfce7;color:#166534;border:none;padding:5px 12px;border-radius:6px;font-size:0.75rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;}
+        .btn-danger{background:#fee2e2;color:#991b1b;border:none;padding:5px 12px;border-radius:6px;font-size:0.75rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;}
+        .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;align-items:center;justify-content:center;}
+        .modal-overlay.open{display:flex;}
+        .modal{background:white;border-radius:16px;padding:32px;width:100%;max-width:540px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);animation:popIn .25s ease;}
+        @keyframes popIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
+        .modal-title{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--navy);margin-bottom:20px;}
+        .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+        .form-field{display:flex;flex-direction:column;gap:5px;}
+        .form-field.full{grid-column:1/-1;}
+        .form-field label{font-size:0.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
+        .form-field input,.form-field select{padding:10px 12px;border:1px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:0.875rem;outline:none;transition:border .2s;}
+        .form-field input:focus,.form-field select:focus{border-color:var(--navy);}
+        .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:22px;}
+        .btn-cancel{background:#f1f5f9;border:1px solid var(--border);color:var(--text);padding:9px 18px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.875rem;}
+        .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+        .stat-mini{background:white;border-radius:10px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.06);border-left:3px solid var(--navy);}
+        .stat-mini-label{font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;}
+        .stat-mini-val{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--text);font-weight:700;}
+        .tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--border);}
+        .tab{padding:10px 20px;font-size:0.875rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .18s;}
+        .tab.active{color:var(--navy);border-bottom-color:var(--navy);}
+        .tab-content{display:none;}
+        .tab-content.active{display:block;}
+        .role-badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:0.72rem;font-weight:600;}
+        .role-admin{background:#ede9fe;color:#4c1d95;}
+        .role-finance{background:#dbeafe;color:#1e40af;}
+        .role-front_office{background:#fef9c3;color:#854d0e;}
+        .net-pay{color:#166534;font-weight:700;}
+        .deduction{color:#991b1b;}
+        .topbar-actions{display:flex;gap:10px;}
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon">CMC</div>
+        <div><div class="brand-name">Cleveland</div><div class="brand-sub">Medical College</div></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="{{ url_for('admin_dashboard') }}" class="nav-item "><span class="nav-icon">⊞</span> Dashboard</a>
+        <a href="{{ url_for('manage_staff') }}" class="nav-item "><span class="nav-icon">👥</span> Staff Management</a>
+        <a href="{{ url_for('students') }}" class="nav-item "><span class="nav-icon">🎓</span> Students</a>
+        <div class="nav-section-label">Finance</div>
+        <a href="{{ url_for('tuition_payments') }}" class="nav-item "><span class="nav-icon">💰</span> Tuition & Payments</a>
+        <a href="{{ url_for('accounts_receivable') }}" class="nav-item "><span class="nav-icon">📥</span> Accounts Receivable</a>
+        <a href="{{ url_for('accounts_payable') }}" class="nav-item "><span class="nav-icon">📤</span> Accounts Payable</a>
+        <a href="{{ url_for('cash_and_bank') }}" class="nav-item "><span class="nav-icon">🏦</span> Cash & Bank</a>
+        <a href="{{ url_for('grants_donations') }}" class="nav-item "><span class="nav-icon">🎁</span> Grants & Donations</a>
+        <a href="{{ url_for('payroll') }}" class="nav-item active"><span class="nav-icon">💼</span> Payroll</a>
+        <div class="nav-section-label">Operations</div>
+        <a href="{{ url_for('inventory') }}" class="nav-item "><span class="nav-icon">📦</span> Inventory</a>
+        <a href="{{ url_for('reports') }}" class="nav-item "><span class="nav-icon">📊</span> Reports</a>
+        <a href="{{ url_for('settings') }}" class="nav-item "><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ session.get('username','AD')[0] }}</div>
+            <div>
+                <div class="user-name">{{ session.get('username','Administrator') }}</div>
+                <div class="user-role">{{ session.get('role','') | replace('_','  ') | title }}</div>
+            </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+</aside>
+
+<main class="main">
+
+    <header class="topbar">
+        <div>
+            <h1 class="page-title">Payroll</h1>
+            <p class="page-subtitle">Manage staff salaries, deductions and payslips</p>
+        </div>
+        <div class="topbar-actions">
+            <button class="btn-primary" onclick="openModal('add')">➕ Add Payroll Record</button>
+        </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for category, message in messages %}
+        <div class="flash-msg" style="{% if category=='success'%}background:#dcfce7;border-color:#86efac;color:#166534;{% endif %}">{{ message }}</div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <!-- Stats -->
+    <div class="stats-row">
+        <div class="stat-mini">
+            <div class="stat-mini-label">Total Gross Salary</div>
+            <div class="stat-mini-val">KSh {{ "{:,.0f}".format(total_gross) }}</div>
+        </div>
+        <div class="stat-mini" style="border-left-color:var(--red)">
+            <div class="stat-mini-label">Total Deductions</div>
+            <div class="stat-mini-val">KSh {{ "{:,.0f}".format(total_deductions) }}</div>
+        </div>
+        <div class="stat-mini" style="border-left-color:var(--green)">
+            <div class="stat-mini-label">Total Net Pay</div>
+            <div class="stat-mini-val">KSh {{ "{:,.0f}".format(total_net) }}</div>
+        </div>
+        <div class="stat-mini" style="border-left-color:var(--orange)">
+            <div class="stat-mini-label">Staff on Payroll</div>
+            <div class="stat-mini-val">{{ staff_count }}</div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('records', this)">Payroll Records</div>
+        <div class="tab" onclick="switchTab('pending', this)">Pending Payment</div>
+        <div class="tab" onclick="switchTab('paid', this)">Paid</div>
+    </div>
+
+    <!-- TAB 1: All Records -->
+    <div class="tab-content active" id="tab-records">
+        <div class="table-card">
+            <div style="display:flex;gap:12px;margin-bottom:18px;">
+                <input type="text" class="search-input" id="s1" placeholder="🔍  Search payroll..." onkeyup="filterTable('t1','s1')">
+            </div>
+            <table class="data-table" id="t1">
+                <thead>
+                    <tr><th>Period</th><th>Staff ID</th><th>Name</th><th>Role</th><th>Gross</th><th>PAYE</th><th>NHIF</th><th>NSSF</th><th>Net Pay</th><th>Status</th><th>Actions</th></tr>
+                </thead>
+                <tbody>
+                    {% if payroll_records %}
+                        {% for p in payroll_records %}
+                        <tr>
+                            <td>{{ p.period }}</td>
+                            <td><strong>{{ p.staff_id }}</strong></td>
+                            <td>{{ p.staff_name }}</td>
+                            <td><span class="role-badge role-{{ p.role }}">{{ p.role | replace('_',' ') | title }}</span></td>
+                            <td>KSh {{ "{:,.2f}".format(p.gross_salary) }}</td>
+                            <td class="deduction">-KSh {{ "{:,.2f}".format(p.paye) }}</td>
+                            <td class="deduction">-KSh {{ "{:,.2f}".format(p.nhif) }}</td>
+                            <td class="deduction">-KSh {{ "{:,.2f}".format(p.nssf) }}</td>
+                            <td class="net-pay">KSh {{ "{:,.2f}".format(p.net_pay) }}</td>
+                            <td><span class="status status--{{ p.status }}">{{ p.status | title }}</span></td>
+                            <td style="display:flex;gap:6px;">
+                                {% if p.status == 'pending' %}
+                                <form method="POST" action="{{ url_for('mark_payroll_paid', payroll_id=p.id) }}">
+                                    <button type="submit" class="btn-success">✓ Pay</button>
+                                </form>
+                                {% endif %}
+                                <form method="POST" action="{{ url_for('delete_payroll', payroll_id=p.id) }}"
+                                      onsubmit="return confirm('Delete this record?')">
+                                    <button type="submit" class="btn-danger">Delete</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="11" class="empty-state">No payroll records yet.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 2: Pending -->
+    <div class="tab-content" id="tab-pending">
+        <div class="table-card">
+            <div style="display:flex;gap:12px;margin-bottom:18px;">
+                <input type="text" class="search-input" id="s2" placeholder="🔍  Search..." onkeyup="filterTable('t2','s2')">
+            </div>
+            <table class="data-table" id="t2">
+                <thead>
+                    <tr><th>Period</th><th>Staff ID</th><th>Name</th><th>Gross</th><th>Net Pay</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                    {% set pending = payroll_records | selectattr('status','equalto','pending') | list %}
+                    {% if pending %}
+                        {% for p in pending %}
+                        <tr>
+                            <td>{{ p.period }}</td>
+                            <td><strong>{{ p.staff_id }}</strong></td>
+                            <td>{{ p.staff_name }}</td>
+                            <td>KSh {{ "{:,.2f}".format(p.gross_salary) }}</td>
+                            <td class="net-pay">KSh {{ "{:,.2f}".format(p.net_pay) }}</td>
+                            <td>
+                                <form method="POST" action="{{ url_for('mark_payroll_paid', payroll_id=p.id) }}">
+                                    <button type="submit" class="btn-success">✓ Mark Paid</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="6" class="empty-state">No pending payroll. 🎉</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 3: Paid -->
+    <div class="tab-content" id="tab-paid">
+        <div class="table-card">
+            <div style="display:flex;gap:12px;margin-bottom:18px;">
+                <input type="text" class="search-input" id="s3" placeholder="🔍  Search..." onkeyup="filterTable('t3','s3')">
+            </div>
+            <table class="data-table" id="t3">
+                <thead>
+                    <tr><th>Period</th><th>Staff ID</th><th>Name</th><th>Role</th><th>Gross</th><th>Net Pay</th></tr>
+                </thead>
+                <tbody>
+                    {% set paid = payroll_records | selectattr('status','equalto','paid') | list %}
+                    {% if paid %}
+                        {% for p in paid %}
+                        <tr>
+                            <td>{{ p.period }}</td>
+                            <td><strong>{{ p.staff_id }}</strong></td>
+                            <td>{{ p.staff_name }}</td>
+                            <td><span class="role-badge role-{{ p.role }}">{{ p.role | replace('_',' ') | title }}</span></td>
+                            <td>KSh {{ "{:,.2f}".format(p.gross_salary) }}</td>
+                            <td class="net-pay">KSh {{ "{:,.2f}".format(p.net_pay) }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="6" class="empty-state">No paid payroll yet.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<!-- ADD PAYROLL MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+    <div class="modal">
+        <div class="modal-title">💼 Add Payroll Record</div>
+        <form method="POST" action="{{ url_for('add_payroll') }}">
+            <div class="form-grid">
+                <div class="form-field">
+                    <label>Staff ID</label>
+                    <input type="text" name="staff_id" placeholder="e.g. CMC-FIN-02" required>
+                </div>
+                <div class="form-field">
+                    <label>Staff Name</label>
+                    <input type="text" name="staff_name" placeholder="Full name" required>
+                </div>
+                <div class="form-field">
+                    <label>Role</label>
+                    <select name="role" required>
+                        <option value="" disabled selected>Select role...</option>
+                        <option value="admin">Admin</option>
+                        <option value="finance">Finance</option>
+                        <option value="front_office">Front Office</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label>Pay Period</label>
+                    <input type="text" name="period" placeholder="e.g. March 2026" required>
+                </div>
+                <div class="form-field">
+                    <label>Gross Salary (KSh)</label>
+                    <input type="number" name="gross_salary" id="grossInput" placeholder="e.g. 80000"
+                        step="0.01" required onchange="calcDeductions()">
+                </div>
+                <div class="form-field">
+                    <label>PAYE (KSh)</label>
+                    <input type="number" name="paye" id="payeInput" step="0.01" value="0" onchange="calcNet()">
+                </div>
+                <div class="form-field">
+                    <label>NHIF (KSh)</label>
+                    <input type="number" name="nhif" id="nhifInput" step="0.01" value="0" onchange="calcNet()">
+                </div>
+                <div class="form-field">
+                    <label>NSSF (KSh)</label>
+                    <input type="number" name="nssf" id="nssfInput" step="0.01" value="0" onchange="calcNet()">
+                </div>
+                <div class="form-field full" style="background:#f0fdf4;border-radius:8px;padding:12px;">
+                    <label>Net Pay (KSh)</label>
+                    <input type="number" name="net_pay" id="netInput" step="0.01" value="0"
+                        style="font-weight:700;color:#166534;background:transparent;border:none;font-size:1rem;" readonly>
+                </div>
+                <div class="form-field">
+                    <label>Status</label>
+                    <select name="status">
+                        <option value="pending">Pending</option>
+                        <option value="paid">Paid</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label>Pay Date</label>
+                    <input type="date" name="pay_date" value="{{ today }}">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="btn-primary">💾 Save Record</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openModal()  { document.getElementById('modalOverlay').classList.add('open'); }
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+function closeModalOutside(e) { if (e.target.id === 'modalOverlay') closeModal(); }
+
+function calcDeductions() {
+    const gross = parseFloat(document.getElementById('grossInput').value) || 0;
+    // Simple Kenya statutory deductions estimate
+    const paye  = gross > 24000 ? (gross - 24000) * 0.25 : 0;
+    const nhif  = gross <= 5999 ? 150 : gross <= 7999 ? 300 : gross <= 11999 ? 400 :
+                  gross <= 14999 ? 500 : gross <= 19999 ? 600 : gross <= 24999 ? 750 :
+                  gross <= 29999 ? 850 : gross <= 34999 ? 900 : gross <= 39999 ? 950 : 1000;
+    const nssf  = Math.min(gross * 0.06, 1080);
+    document.getElementById('payeInput').value  = paye.toFixed(2);
+    document.getElementById('nhifInput').value  = nhif.toFixed(2);
+    document.getElementById('nssfInput').value  = nssf.toFixed(2);
+    calcNet();
+}
+
+function calcNet() {
+    const gross = parseFloat(document.getElementById('grossInput').value) || 0;
+    const paye  = parseFloat(document.getElementById('payeInput').value)  || 0;
+    const nhif  = parseFloat(document.getElementById('nhifInput').value)  || 0;
+    const nssf  = parseFloat(document.getElementById('nssfInput').value)  || 0;
+    document.getElementById('netInput').value = (gross - paye - nhif - nssf).toFixed(2);
+}
+
+function switchTab(name, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    el.classList.add('active');
+}
+function filterTable(tableId, inputId) {
+    const q = document.getElementById(inputId).value.toLowerCase();
+    document.querySelectorAll('#' + tableId + ' tbody tr').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+</script>
+</body>
+</html>

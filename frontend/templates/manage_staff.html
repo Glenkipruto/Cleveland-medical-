@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Staff Management | Cleveland Medical College</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+    <style>
+        .btn-primary {
+            background:var(--navy); color:white; border:none;
+            padding:10px 20px; border-radius:8px; font-family:'DM Sans',sans-serif;
+            font-size:0.875rem; font-weight:600; cursor:pointer; transition:background .18s;
+            text-decoration:none; display:inline-flex; align-items:center; gap:6px;
+        }
+        .btn-primary:hover { background:var(--navy-lt); }
+        .btn-danger {
+            background:#fee2e2; color:#991b1b; border:none;
+            padding:6px 14px; border-radius:6px; font-size:0.78rem;
+            cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:600;
+        }
+        .modal-overlay {
+            display:none; position:fixed; inset:0;
+            background:rgba(0,0,0,0.45); z-index:200;
+            align-items:center; justify-content:center;
+        }
+        .modal-overlay.open { display:flex; }
+        .modal {
+            background:white; border-radius:16px; padding:32px;
+            width:100%; max-width:480px;
+            box-shadow:0 20px 60px rgba(0,0,0,0.2);
+            animation: popIn .25s ease;
+        }
+        @keyframes popIn { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+        .modal-title { font-family:'Playfair Display',serif; font-size:1.3rem; color:var(--navy); margin-bottom:20px; }
+        .form-field { display:flex; flex-direction:column; gap:5px; margin-bottom:14px; }
+        .form-field label { font-size:0.75rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; }
+        .form-field input, .form-field select {
+            padding:10px 12px; border:1px solid var(--border);
+            border-radius:7px; font-family:'DM Sans',sans-serif; font-size:0.875rem; outline:none;
+        }
+        .form-field input:focus, .form-field select:focus { border-color:var(--navy); }
+        .modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:22px; }
+        .btn-cancel {
+            background:#f1f5f9; border:1px solid var(--border); color:var(--text);
+            padding:9px 18px; border-radius:8px; cursor:pointer; font-family:'DM Sans',sans-serif; font-size:0.875rem;
+        }
+        .search-input {
+            flex:1; padding:10px 16px; border:1px solid var(--border);
+            border-radius:8px; font-family:'DM Sans',sans-serif; font-size:0.9rem; outline:none;
+        }
+        .search-input:focus { border-color:var(--navy); }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon">CMC</div>
+        <div><div class="brand-name">Cleveland</div><div class="brand-sub">Medical College</div></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="{{ url_for('admin_dashboard') }}" class="nav-item "><span class="nav-icon">⊞</span> Dashboard</a>
+        <a href="{{ url_for('manage_staff') }}" class="nav-item active"><span class="nav-icon">👥</span> Staff Management</a>
+        <a href="{{ url_for('students') }}" class="nav-item "><span class="nav-icon">🎓</span> Students</a>
+        <div class="nav-section-label">Finance</div>
+        <a href="{{ url_for('tuition_payments') }}" class="nav-item "><span class="nav-icon">💰</span> Tuition & Payments</a>
+        <a href="{{ url_for('accounts_receivable') }}" class="nav-item "><span class="nav-icon">📥</span> Accounts Receivable</a>
+        <a href="{{ url_for('accounts_payable') }}" class="nav-item "><span class="nav-icon">📤</span> Accounts Payable</a>
+        <a href="{{ url_for('cash_and_bank') }}" class="nav-item "><span class="nav-icon">🏦</span> Cash & Bank</a>
+        <a href="{{ url_for('grants_donations') }}" class="nav-item "><span class="nav-icon">🎁</span> Grants & Donations</a>
+        <a href="{{ url_for('payroll') }}" class="nav-item "><span class="nav-icon">💼</span> Payroll</a>
+        <div class="nav-section-label">Operations</div>
+        <a href="{{ url_for('inventory') }}" class="nav-item "><span class="nav-icon">📦</span> Inventory</a>
+        <a href="{{ url_for('reports') }}" class="nav-item "><span class="nav-icon">📊</span> Reports</a>
+        <a href="{{ url_for('settings') }}" class="nav-item "><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ session.get('username','AD')[0] }}</div>
+            <div>
+                <div class="user-name">{{ session.get('username','Administrator') }}</div>
+                <div class="user-role">{{ session.get('role','') | replace('_','  ') | title }}</div>
+            </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+</aside>
+
+<main class="main">
+    <header class="topbar">
+        <div>
+            <h1 class="page-title">Staff Management</h1>
+            <p class="page-subtitle">Manage all staff accounts and roles</p>
+        </div>
+        <button class="btn-primary" onclick="document.getElementById('modalOverlay').classList.add('open')">➕ Add Staff</button>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="flash-msg" style="{% if category == 'success' %}background:#dcfce7;border-color:#86efac;color:#166534;{% endif %}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="table-card">
+        <div style="display:flex;gap:12px;margin-bottom:18px;">
+            <input type="text" class="search-input" id="searchInput" placeholder="🔍  Search staff..." onkeyup="filterTable()">
+        </div>
+        <table class="data-table" id="staffTable">
+            <thead>
+                <tr><th>Staff ID</th><th>Email</th><th>Role</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+                {% if staff_list %}
+                    {% for s in staff_list %}
+                    <tr>
+                        <td><strong>{{ s.staff_id }}</strong></td>
+                        <td>{{ s.email }}</td>
+                        <td><span class="tag tag--income">{{ s.role | replace('_',' ') | title }}</span></td>
+                        <td>
+                            {% if s.staff_id != session.get('username') %}
+                            <form method="POST" action="{{ url_for('delete_staff', staff_id=s.id) }}"
+                                  onsubmit="return confirm('Remove {{ s.staff_id }}?')">
+                                <button type="submit" class="btn-danger">Remove</button>
+                            </form>
+                            {% else %}
+                            <span style="font-size:0.8rem;color:var(--muted);">Current user</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="4" class="empty-state">No staff members found.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target.id==='modalOverlay') this.classList.remove('open')">
+    <div class="modal">
+        <div class="modal-title">👤 Add Staff Member</div>
+        <form method="POST" action="{{ url_for('add_staff') }}">
+            <div class="form-field">
+                <label>Staff ID</label>
+                <input type="text" name="staff_id" placeholder="e.g. CMC-FIN-02" required>
+            </div>
+            <div class="form-field">
+                <label>Email</label>
+                <input type="email" name="email" placeholder="e.g. finance@cmc.edu" required>
+            </div>
+            <div class="form-field">
+                <label>Password</label>
+                <input type="password" name="password" placeholder="Set a password" required>
+            </div>
+            <div class="form-field">
+                <label>Role</label>
+                <select name="role" required>
+                    <option value="" disabled selected>Select role...</option>
+                    <option value="admin">Admin</option>
+                    <option value="finance">Finance Office</option>
+                    <option value="front_office">Front Office</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="document.getElementById('modalOverlay').classList.remove('open')">Cancel</button>
+                <button type="submit" class="btn-primary">💾 Save Staff</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function filterTable() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    document.querySelectorAll('#staffTable tbody tr').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+</script>
+</body>
+</html>

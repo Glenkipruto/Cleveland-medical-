@@ -1,0 +1,84 @@
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
+        
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #f4f7f6;
+        }
+
+        /* Left Side: Decorative Image */
+        .brand-panel {
+            flex: 1;
+            background: linear-gradient(rgba(0, 51, 102, 0.7), rgba(0, 51, 102, 0.7)),
+                        url("../images/login.png"); 
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        /* Right Side: Login Form */
+        .login-panel {
+            width: 450px;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 60px;
+            box-shadow: -10px 0 20px rgba(0,0,0,0.05);
+        }
+
+        .login-header h2 { color: #003366; margin-bottom: 10px; font-size: 24px; }
+        .login-header p { color: #666; margin-bottom: 30px; font-size: 14px; }
+
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; color: #333; font-weight: 600; font-size: 14px; }
+        
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus { outline: none; border-color: #003366; }
+
+        .btn-login {
+            margin-top: 10px;
+            width: 100%;
+            padding: 14px;
+            background-color: #003366;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn-login:hover { background-color: #78a4cf; }
+
+        .footer-links {
+            margin-top: 25px;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .footer-links a { color: #003366; text-decoration: none; }
+        .footer-links a:hover { text-decoration: underline; }
+
+        /* Responsive adjustment */
+        @media (max-width: 850px) {
+            .brand-panel { display: none; }
+            .login-panel { width: 100%; }
+        }
+    

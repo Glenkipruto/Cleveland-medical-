@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cash & Bank | Cleveland Medical College</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+    <style>
+        .search-input {
+            flex:1; padding:10px 16px; border:1px solid var(--border);
+            border-radius:8px; font-family:'DM Sans',sans-serif; font-size:0.9rem;
+            outline:none; transition:border .2s;
+        }
+        .search-input:focus { border-color:var(--navy); }
+        .btn-primary {
+            background:var(--navy); color:white; border:none;
+            padding:10px 20px; border-radius:8px; font-family:'DM Sans',sans-serif;
+            font-size:0.875rem; font-weight:600; cursor:pointer; transition:background .18s;
+            text-decoration:none; display:inline-flex; align-items:center; gap:6px;
+        }
+        .btn-primary:hover { background:var(--navy-lt); }
+        .btn-outline {
+            background:white; color:var(--navy); border:1.5px solid var(--navy);
+            padding:9px 18px; border-radius:8px; font-family:'DM Sans',sans-serif;
+            font-size:0.875rem; font-weight:600; cursor:pointer;
+        }
+        .modal-overlay {
+            display:none; position:fixed; inset:0;
+            background:rgba(0,0,0,0.45); z-index:200;
+            align-items:center; justify-content:center;
+        }
+        .modal-overlay.open { display:flex; }
+        .modal {
+            background:white; border-radius:16px; padding:32px;
+            width:100%; max-width:500px;
+            box-shadow:0 20px 60px rgba(0,0,0,0.2);
+            animation: popIn .25s ease;
+        }
+        @keyframes popIn {
+            from { opacity:0; transform:scale(0.95); }
+            to   { opacity:1; transform:scale(1); }
+        }
+        .modal-title { font-family:'Playfair Display',serif; font-size:1.3rem; color:var(--navy); margin-bottom:20px; }
+        .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+        .form-field { display:flex; flex-direction:column; gap:5px; }
+        .form-field.full { grid-column:1/-1; }
+        .form-field label { font-size:0.75rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; }
+        .form-field input, .form-field select {
+            padding:10px 12px; border:1px solid var(--border);
+            border-radius:7px; font-family:'DM Sans',sans-serif;
+            font-size:0.875rem; outline:none; transition:border .2s;
+        }
+        .form-field input:focus, .form-field select:focus { border-color:var(--navy); }
+        .modal-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:22px; }
+        .btn-cancel {
+            background:#f1f5f9; border:1px solid var(--border); color:var(--text);
+            padding:9px 18px; border-radius:8px; cursor:pointer;
+            font-family:'DM Sans',sans-serif; font-size:0.875rem;
+        }
+        .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px; }
+        .stat-mini {
+            background:white; border-radius:10px; padding:16px 18px;
+            box-shadow:0 1px 4px rgba(0,0,0,0.06); border-left:3px solid var(--navy);
+        }
+        .stat-mini-label { font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:4px; }
+        .stat-mini-val { font-family:'Playfair Display',serif; font-size:1.3rem; color:var(--text); font-weight:700; }
+        .tabs { display:flex; gap:4px; margin-bottom:20px; border-bottom:2px solid var(--border); }
+        .tab {
+            padding:10px 20px; font-size:0.875rem; font-weight:600;
+            color:var(--muted); cursor:pointer; border-bottom:2px solid transparent;
+            margin-bottom:-2px; transition:all .18s;
+        }
+        .tab.active { color:var(--navy); border-bottom-color:var(--navy); }
+        .tab-content { display:none; }
+        .tab-content.active { display:block; }
+        .account-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:24px; }
+        .account-card {
+            background:white; border-radius:12px; padding:20px 22px;
+            box-shadow:0 2px 8px rgba(0,0,0,0.07);
+            border-top:4px solid var(--navy);
+        }
+        .account-card.bank  { border-top-color:#1a7a4a; }
+        .account-card.mobile{ border-top-color:#b45309; }
+        .acc-name  { font-size:0.75rem; text-transform:uppercase; letter-spacing:1px; color:var(--muted); }
+        .acc-bal   { font-family:'Playfair Display',serif; font-size:1.6rem; font-weight:700; margin:6px 0 2px; }
+        .acc-label { font-size:0.78rem; color:var(--muted); }
+        .credit { color:#166534; font-weight:700; }
+        .debit  { color:#991b1b; font-weight:700; }
+        .topbar-actions { display:flex; gap:10px; }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon">CMC</div>
+        <div><div class="brand-name">Cleveland</div><div class="brand-sub">Medical College</div></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="{{ url_for('admin_dashboard') }}" class="nav-item "><span class="nav-icon">⊞</span> Dashboard</a>
+        <a href="{{ url_for('manage_staff') }}" class="nav-item "><span class="nav-icon">👥</span> Staff Management</a>
+        <a href="{{ url_for('students') }}" class="nav-item "><span class="nav-icon">🎓</span> Students</a>
+        <div class="nav-section-label">Finance</div>
+        <a href="{{ url_for('tuition_payments') }}" class="nav-item "><span class="nav-icon">💰</span> Tuition & Payments</a>
+        <a href="{{ url_for('accounts_receivable') }}" class="nav-item "><span class="nav-icon">📥</span> Accounts Receivable</a>
+        <a href="{{ url_for('accounts_payable') }}" class="nav-item "><span class="nav-icon">📤</span> Accounts Payable</a>
+        <a href="{{ url_for('cash_and_bank') }}" class="nav-item active"><span class="nav-icon">🏦</span> Cash & Bank</a>
+        <a href="{{ url_for('grants_donations') }}" class="nav-item "><span class="nav-icon">🎁</span> Grants & Donations</a>
+        <a href="{{ url_for('payroll') }}" class="nav-item "><span class="nav-icon">💼</span> Payroll</a>
+        <div class="nav-section-label">Operations</div>
+        <a href="{{ url_for('inventory') }}" class="nav-item "><span class="nav-icon">📦</span> Inventory</a>
+        <a href="{{ url_for('reports') }}" class="nav-item "><span class="nav-icon">📊</span> Reports</a>
+        <a href="{{ url_for('settings') }}" class="nav-item "><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ session.get('username','AD')[0] }}</div>
+            <div>
+                <div class="user-name">{{ session.get('username','Administrator') }}</div>
+                <div class="user-role">{{ session.get('role','') | replace('_','  ') | title }}</div>
+            </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+</aside>
+
+<main class="main">
+
+    <header class="topbar">
+        <div>
+            <h1 class="page-title">Cash & Bank</h1>
+            <p class="page-subtitle">Track cash on hand, bank accounts & transactions</p>
+        </div>
+        <div class="topbar-actions">
+            <button class="btn-outline" onclick="openModal('deposit')">⬇️ Deposit</button>
+            <button class="btn-primary" onclick="openModal('withdrawal')">⬆️ Withdrawal</button>
+        </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="flash-msg" style="{% if category == 'success' %}background:#dcfce7;border-color:#86efac;color:#166534;{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Account Balance Cards -->
+    <div class="account-cards">
+        <div class="account-card">
+            <div class="acc-name">Cash on Hand</div>
+            <div class="acc-bal">KSh {{ "{:,.2f}".format(cash_balance) }}</div>
+            <div class="acc-label">Physical cash at college</div>
+        </div>
+        <div class="account-card bank">
+            <div class="acc-name">Bank Account</div>
+            <div class="acc-bal">KSh {{ "{:,.2f}".format(bank_balance) }}</div>
+            <div class="acc-label">Main operating account</div>
+        </div>
+        <div class="account-card mobile">
+            <div class="acc-name">M-Pesa Float</div>
+            <div class="acc-bal">KSh {{ "{:,.2f}".format(mpesa_balance) }}</div>
+            <div class="acc-label">Mobile money balance</div>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="stats-row">
+        <div class="stat-mini">
+            <div class="stat-mini-label">Total Balance</div>
+            <div class="stat-mini-val">KSh {{ "{:,.0f}".format(cash_balance + bank_balance + mpesa_balance) }}</div>
+        </div>
+        <div class="stat-mini" style="border-left-color:var(--green)">
+            <div class="stat-mini-label">Total Deposits</div>
+            <div class="stat-mini-val">KSh {{ "{:,.0f}".format(total_deposits) }}</div>
+        </div>
+        <div class="stat-mini" style="border-left-color:var(--red)">
+            <div class="stat-mini-label">Total Withdrawals</div>
+            <div class="stat-mini-val">KSh {{ "{:,.0f}".format(total_withdrawals) }}</div>
+        </div>
+        <div class="stat-mini" style="border-left-color:var(--orange)">
+            <div class="stat-mini-label">Transactions</div>
+            <div class="stat-mini-val">{{ transaction_count }}</div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('all', this)">All Transactions</div>
+        <div class="tab" onclick="switchTab('deposits', this)">Deposits</div>
+        <div class="tab" onclick="switchTab('withdrawals', this)">Withdrawals</div>
+    </div>
+
+    <!-- TAB 1: All -->
+    <div class="tab-content active" id="tab-all">
+        <div class="table-card">
+            <div style="display:flex;gap:12px;margin-bottom:18px;">
+                <input type="text" class="search-input" id="s1"
+                    placeholder="🔍  Search transactions..." onkeyup="filterTable('t1','s1')">
+            </div>
+            <table class="data-table" id="t1">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th>Account</th>
+                        <th>Type</th>
+                        <th>Amount</th>
+                        <th>Recorded By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if cb_transactions %}
+                        {% for t in cb_transactions %}
+                        <tr>
+                            <td>{{ t.date }}</td>
+                            <td>{{ t.description }}</td>
+                            <td><span class="tag tag--income">{{ t.account }}</span></td>
+                            <td>
+                                {% if t.cb_type == 'deposit' %}
+                                    <span class="status status--paid">Deposit</span>
+                                {% else %}
+                                    <span class="status status--pending">Withdrawal</span>
+                                {% endif %}
+                            </td>
+                            <td class="{{ 'credit' if t.cb_type == 'deposit' else 'debit' }}">
+                                {{ '+' if t.cb_type == 'deposit' else '-' }}KSh {{ "{:,.2f}".format(t.amount) }}
+                            </td>
+                            <td>{{ t.recorded_by }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="6" class="empty-state">No transactions recorded yet.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 2: Deposits -->
+    <div class="tab-content" id="tab-deposits">
+        <div class="table-card">
+            <div style="display:flex;gap:12px;margin-bottom:18px;">
+                <input type="text" class="search-input" id="s2"
+                    placeholder="🔍  Search deposits..." onkeyup="filterTable('t2','s2')">
+            </div>
+            <table class="data-table" id="t2">
+                <thead>
+                    <tr><th>Date</th><th>Description</th><th>Account</th><th>Amount</th><th>Recorded By</th></tr>
+                </thead>
+                <tbody>
+                    {% set deps = cb_transactions | selectattr('cb_type','equalto','deposit') | list %}
+                    {% if deps %}
+                        {% for t in deps %}
+                        <tr>
+                            <td>{{ t.date }}</td>
+                            <td>{{ t.description }}</td>
+                            <td><span class="tag tag--income">{{ t.account }}</span></td>
+                            <td class="credit">+KSh {{ "{:,.2f}".format(t.amount) }}</td>
+                            <td>{{ t.recorded_by }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="5" class="empty-state">No deposits yet.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- TAB 3: Withdrawals -->
+    <div class="tab-content" id="tab-withdrawals">
+        <div class="table-card">
+            <div style="display:flex;gap:12px;margin-bottom:18px;">
+                <input type="text" class="search-input" id="s3"
+                    placeholder="🔍  Search withdrawals..." onkeyup="filterTable('t3','s3')">
+            </div>
+            <table class="data-table" id="t3">
+                <thead>
+                    <tr><th>Date</th><th>Description</th><th>Account</th><th>Amount</th><th>Recorded By</th></tr>
+                </thead>
+                <tbody>
+                    {% set wds = cb_transactions | selectattr('cb_type','equalto','withdrawal') | list %}
+                    {% if wds %}
+                        {% for t in wds %}
+                        <tr>
+                            <td>{{ t.date }}</td>
+                            <td>{{ t.description }}</td>
+                            <td><span class="tag tag--income">{{ t.account }}</span></td>
+                            <td class="debit">-KSh {{ "{:,.2f}".format(t.amount) }}</td>
+                            <td>{{ t.recorded_by }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr><td colspan="5" class="empty-state">No withdrawals yet.</td></tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</main>
+
+<!-- TRANSACTION MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+    <div class="modal">
+        <div class="modal-title" id="modalTitle">Record Transaction</div>
+        <form method="POST" action="{{ url_for('add_cash_transaction') }}">
+            <input type="hidden" name="cb_type" id="cbType" value="deposit">
+            <div class="form-grid">
+                <div class="form-field full">
+                    <label>Description</label>
+                    <input type="text" name="description" placeholder="e.g. Tuition cash received" required>
+                </div>
+                <div class="form-field">
+                    <label>Amount (KSh)</label>
+                    <input type="number" name="amount" placeholder="e.g. 10000" step="0.01" required>
+                </div>
+                <div class="form-field">
+                    <label>Date</label>
+                    <input type="date" name="date" value="{{ today }}" required>
+                </div>
+                <div class="form-field">
+                    <label>Account</label>
+                    <select name="account" required>
+                        <option value="Cash">Cash on Hand</option>
+                        <option value="Bank">Bank Account</option>
+                        <option value="M-Pesa">M-Pesa</option>
+                    </select>
+                </div>
+                <div class="form-field">
+                    <label>Reference (optional)</label>
+                    <input type="text" name="reference" placeholder="e.g. Cheque #1234">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="btn-primary" id="submitBtn">💾 Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openModal(type) {
+    document.getElementById('cbType').value = type;
+    document.getElementById('modalTitle').textContent = type === 'deposit' ? '⬇️ Record Deposit' : '⬆️ Record Withdrawal';
+    document.getElementById('submitBtn').textContent = type === 'deposit' ? '💾 Save Deposit' : '💾 Save Withdrawal';
+    document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
+function closeModalOutside(e) { if (e.target.id === 'modalOverlay') closeModal(); }
+
+function switchTab(name, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    el.classList.add('active');
+}
+function filterTable(tableId, inputId) {
+    const q = document.getElementById(inputId).value.toLowerCase();
+    document.querySelectorAll('#' + tableId + ' tbody tr').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+</script>
+</body>
+</html>

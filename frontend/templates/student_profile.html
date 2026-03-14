@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Profile | Cleveland Medical College</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+    <style>
+        .btn-primary { background:var(--navy);color:white;border:none;padding:10px 20px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:0.875rem;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px; }
+        .btn-primary:hover{background:var(--navy-lt);}
+        .btn-danger{background:#fee2e2;color:#991b1b;border:none;padding:9px 18px;border-radius:8px;font-size:0.875rem;cursor:pointer;font-family:'DM Sans',sans-serif;font-weight:600;}
+        .btn-back{background:#f1f5f9;border:1px solid var(--border);color:var(--text);padding:9px 18px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.875rem;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+        .profile-grid{display:grid;grid-template-columns:320px 1fr;gap:20px;align-items:start;}
+        .profile-card{background:white;border-radius:14px;padding:28px;box-shadow:0 2px 8px rgba(0,0,0,0.07);}
+        .avatar-circle{width:80px;height:80px;border-radius:50%;background:var(--navy);color:white;font-family:'Playfair Display',serif;font-size:2rem;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;}
+        .profile-name{font-family:'Playfair Display',serif;font-size:1.4rem;color:var(--navy);text-align:center;margin-bottom:4px;}
+        .profile-id{text-align:center;color:var(--muted);font-size:0.85rem;margin-bottom:20px;}
+        .profile-divider{height:1px;background:var(--border);margin:16px 0;}
+        .profile-row{display:flex;justify-content:space-between;padding:8px 0;font-size:0.875rem;}
+        .profile-row .label{color:var(--muted);}
+        .profile-row .value{font-weight:600;color:var(--text);}
+        .fee-box{background:#f8fafc;border-radius:10px;padding:16px;margin-top:16px;}
+        .fee-label{font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;}
+        .fee-val{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;}
+        .fee-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;}
+        .progress-wrap{margin-top:8px;}
+        .progress-label{display:flex;justify-content:space-between;font-size:0.78rem;color:var(--muted);margin-bottom:5px;}
+        .progress-bar{height:10px;background:#e2e8f0;border-radius:999px;overflow:hidden;}
+        .progress-fill{height:100%;border-radius:999px;background:var(--navy);transition:width .4s;}
+        .right-col{display:flex;flex-direction:column;gap:20px;}
+        .section-title{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy);margin-bottom:14px;}
+        .info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+        .info-item{background:#f8fafc;border-radius:8px;padding:12px 14px;}
+        .info-item-label{font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:3px;}
+        .info-item-val{font-size:0.9rem;font-weight:600;color:var(--text);}
+        .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;align-items:center;justify-content:center;}
+        .modal-overlay.open{display:flex;}
+        .modal{background:white;border-radius:16px;padding:32px;width:100%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,0.2);animation:popIn .25s ease;}
+        @keyframes popIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
+        .modal-title{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--navy);margin-bottom:20px;}
+        .form-field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px;}
+        .form-field label{font-size:0.75rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
+        .form-field input,.form-field select{padding:10px 12px;border:1px solid var(--border);border-radius:7px;font-family:'DM Sans',sans-serif;font-size:0.875rem;outline:none;}
+        .form-field input:focus{border-color:var(--navy);}
+        .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:22px;}
+        .btn-cancel{background:#f1f5f9;border:1px solid var(--border);color:var(--text);padding:9px 18px;border-radius:8px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:0.875rem;}
+        .topbar-actions{display:flex;gap:10px;align-items:center;}
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon">CMC</div>
+        <div><div class="brand-name">Cleveland</div><div class="brand-sub">Medical College</div></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="{{ url_for('admin_dashboard') }}" class="nav-item "><span class="nav-icon">⊞</span> Dashboard</a>
+        <a href="{{ url_for('manage_staff') }}" class="nav-item "><span class="nav-icon">👥</span> Staff Management</a>
+        <a href="{{ url_for('students') }}" class="nav-item active"><span class="nav-icon">🎓</span> Students</a>
+        <div class="nav-section-label">Finance</div>
+        <a href="{{ url_for('tuition_payments') }}" class="nav-item "><span class="nav-icon">💰</span> Tuition & Payments</a>
+        <a href="{{ url_for('accounts_receivable') }}" class="nav-item "><span class="nav-icon">📥</span> Accounts Receivable</a>
+        <a href="{{ url_for('accounts_payable') }}" class="nav-item "><span class="nav-icon">📤</span> Accounts Payable</a>
+        <a href="{{ url_for('cash_and_bank') }}" class="nav-item "><span class="nav-icon">🏦</span> Cash & Bank</a>
+        <a href="{{ url_for('grants_donations') }}" class="nav-item "><span class="nav-icon">🎁</span> Grants & Donations</a>
+        <a href="{{ url_for('payroll') }}" class="nav-item "><span class="nav-icon">💼</span> Payroll</a>
+        <div class="nav-section-label">Operations</div>
+        <a href="{{ url_for('inventory') }}" class="nav-item "><span class="nav-icon">📦</span> Inventory</a>
+        <a href="{{ url_for('reports') }}" class="nav-item "><span class="nav-icon">📊</span> Reports</a>
+        <a href="{{ url_for('settings') }}" class="nav-item "><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ session.get('username','AD')[0] }}</div>
+            <div>
+                <div class="user-name">{{ session.get('username','Administrator') }}</div>
+                <div class="user-role">{{ session.get('role','') | replace('_','  ') | title }}</div>
+            </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+</aside>
+
+<main class="main">
+
+    <header class="topbar">
+        <div style="display:flex;align-items:center;gap:14px;">
+            <a href="{{ url_for('students') }}" class="btn-back">← Back</a>
+            <div>
+                <h1 class="page-title">{{ student.full_name }}</h1>
+                <p class="page-subtitle">{{ student.student_id }} · {{ student.program }}</p>
+            </div>
+        </div>
+        <div class="topbar-actions">
+            <button class="btn-primary" onclick="document.getElementById('payModal').classList.add('open')">💳 Record Payment</button>
+            {% if session.get('role') == 'admin' %}
+            <form method="POST" action="{{ url_for('delete_student', student_id=student.id) }}"
+                  onsubmit="return confirm('Permanently delete {{ student.full_name }}?')">
+                <button type="submit" class="btn-danger">🗑 Delete</button>
+            </form>
+            {% endif %}
+        </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for category, message in messages %}
+        <div class="flash-msg" style="{% if category=='success'%}background:#dcfce7;border-color:#86efac;color:#166534;{% endif %}">{{ message }}</div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div class="profile-grid">
+
+        <!-- LEFT: Profile Card -->
+        <div class="profile-card">
+            <div class="avatar-circle">{{ student.full_name[0] }}</div>
+            <div class="profile-name">{{ student.full_name }}</div>
+            <div class="profile-id">{{ student.student_id }}</div>
+
+            <span class="status status--{{ 'paid' if student.balance == 0 else 'pending' }}" style="display:block;text-align:center;margin-bottom:16px;">
+                {{ 'Fully Paid' if student.balance == 0 else 'Balance Due' }}
+            </span>
+
+            <div class="profile-divider"></div>
+
+            <div class="profile-row"><span class="label">Program</span><span class="value">{{ student.program }}</span></div>
+            <div class="profile-row"><span class="label">Year of Study</span><span class="value">Year {{ student.year }}</span></div>
+            <div class="profile-row"><span class="label">Intake Year</span><span class="value">{{ student.intake_year or '—' }}</span></div>
+            <div class="profile-row"><span class="label">Status</span><span class="value">{{ student.status }}</span></div>
+
+            <div class="profile-divider"></div>
+
+            <div class="profile-row"><span class="label">Phone</span><span class="value">{{ student.phone or '—' }}</span></div>
+            <div class="profile-row"><span class="label">Email</span><span class="value">{{ student.email or '—' }}</span></div>
+            <div class="profile-row"><span class="label">National ID</span><span class="value">{{ student.national_id or '—' }}</span></div>
+            <div class="profile-row"><span class="label">Date of Birth</span><span class="value">{{ student.dob or '—' }}</span></div>
+
+            <div class="profile-divider"></div>
+
+            <!-- Fee Summary -->
+            <div class="fee-grid">
+                <div class="fee-box">
+                    <div class="fee-label">Total Fee</div>
+                    <div class="fee-val" style="font-size:1rem;">KSh {{ "{:,.0f}".format(student.tuition_fee) }}</div>
+                </div>
+                <div class="fee-box">
+                    <div class="fee-label">Paid</div>
+                    <div class="fee-val" style="font-size:1rem;color:#166534;">KSh {{ "{:,.0f}".format(student.amount_paid) }}</div>
+                </div>
+                <div class="fee-box">
+                    <div class="fee-label">Balance</div>
+                    <div class="fee-val" style="font-size:1rem;color:#991b1b;">KSh {{ "{:,.0f}".format(student.balance) }}</div>
+                </div>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="progress-wrap">
+                <div class="progress-label">
+                    <span>Payment progress</span>
+                    <span>{{ "{:.0f}".format([(student.amount_paid / student.tuition_fee * 100) if student.tuition_fee > 0 else 0, 100]|min) }}%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width:{{ [(student.amount_paid / student.tuition_fee * 100) if student.tuition_fee > 0 else 0, 100]|min }}%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: Details + Payment History -->
+        <div class="right-col">
+
+            <!-- Personal Details -->
+            <div class="profile-card">
+                <div class="section-title">📋 Full Details</div>
+                <div class="info-grid">
+                    <div class="info-item"><div class="info-item-label">Full Name</div><div class="info-item-val">{{ student.full_name }}</div></div>
+                    <div class="info-item"><div class="info-item-label">Student ID</div><div class="info-item-val">{{ student.student_id }}</div></div>
+                    <div class="info-item"><div class="info-item-label">Program</div><div class="info-item-val">{{ student.program }}</div></div>
+                    <div class="info-item"><div class="info-item-label">Year of Study</div><div class="info-item-val">Year {{ student.year }}</div></div>
+                    <div class="info-item"><div class="info-item-label">Intake Year</div><div class="info-item-val">{{ student.intake_year or '—' }}</div></div>
+                    <div class="info-item"><div class="info-item-label">Status</div><div class="info-item-val">{{ student.status }}</div></div>
+                    <div class="info-item"><div class="info-item-label">Phone</div><div class="info-item-val">{{ student.phone or '—' }}</div></div>
+                    <div class="info-item"><div class="info-item-label">Email</div><div class="info-item-val">{{ student.email or '—' }}</div></div>
+                    <div class="info-item"><div class="info-item-label">National ID</div><div class="info-item-val">{{ student.national_id or '—' }}</div></div>
+                    <div class="info-item"><div class="info-item-label">Date of Birth</div><div class="info-item-val">{{ student.dob or '—' }}</div></div>
+                </div>
+            </div>
+
+            <!-- Payment History -->
+            <div class="profile-card">
+                <div class="section-title">💳 Payment History</div>
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Receipt No.</th><th>Date</th><th>Amount</th><th>Method</th><th>Notes</th><th>Recorded By</th></tr>
+                    </thead>
+                    <tbody>
+                        {% if student.payments %}
+                            {% for p in student.payments | sort(attribute='id', reverse=True) %}
+                            <tr>
+                                <td><strong>{{ p.receipt_no }}</strong></td>
+                                <td>{{ p.date }}</td>
+                                <td style="color:#166534;font-weight:700;">+KSh {{ "{:,.2f}".format(p.amount) }}</td>
+                                <td><span class="tag tag--income">{{ p.method }}</span></td>
+                                <td>{{ p.notes or '—' }}</td>
+                                <td>{{ p.recorded_by }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="6" class="empty-state">No payments recorded yet.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+</main>
+
+<!-- QUICK PAYMENT MODAL -->
+<div class="modal-overlay" id="payModal" onclick="if(event.target.id==='payModal') this.classList.remove('open')">
+    <div class="modal">
+        <div class="modal-title">💳 Record Payment — {{ student.full_name }}</div>
+        <form method="POST" action="{{ url_for('record_payment') }}">
+            <input type="hidden" name="student_id" value="{{ student.id }}">
+            <div class="form-field">
+                <label>Amount (KSh)</label>
+                <input type="number" name="amount" placeholder="e.g. 50000" step="0.01" required max="{{ student.balance }}">
+                <small style="color:var(--muted);font-size:0.78rem;">Balance due: KSh {{ "{:,.2f}".format(student.balance) }}</small>
+            </div>
+            <div class="form-field">
+                <label>Payment Date</label>
+                <input type="date" name="date" value="{{ today }}" required>
+            </div>
+            <div class="form-field">
+                <label>Payment Method</label>
+                <select name="method" required>
+                    <option value="" disabled selected>Select method...</option>
+                    <option value="Cash">Cash</option>
+                    <option value="M-Pesa">M-Pesa</option>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Cheque">Cheque</option>
+                    <option value="Card">Card</option>
+                </select>
+            </div>
+            <div class="form-field">
+                <label>Receipt No.</label>
+                <input type="text" name="receipt_no" id="receiptNo" readonly style="background:#f8fafc;">
+            </div>
+            <div class="form-field">
+                <label>Notes (optional)</label>
+                <input type="text" name="notes" placeholder="e.g. Second instalment">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="document.getElementById('payModal').classList.remove('open')">Cancel</button>
+                <button type="submit" class="btn-primary">💾 Save Payment</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Auto generate receipt number
+function genReceipt() {
+    const now = new Date();
+    return 'RCP-' + now.getFullYear() +
+        String(now.getMonth()+1).padStart(2,'0') +
+        String(now.getDate()).padStart(2,'0') + '-' +
+        String(Math.floor(Math.random()*9000)+1000);
+}
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('receiptNo').value = genReceipt();
+});
+document.getElementById('payModal').addEventListener('click', e => {
+    if(e.target.id === 'payModal') e.target.classList.remove('open');
+});
+</script>
+</body>
+</html>
