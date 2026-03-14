@@ -17,20 +17,21 @@
     </div>
     <nav class="sidebar-nav">
         <div class="nav-section-label">Main</div>
-        <a href="{{ url_for('admin_dashboard') }}" class="nav-item active"><span class="nav-icon">⊞</span> Dashboard</a>
-        <a href="{{ url_for('manage_staff') }}" class="nav-item "><span class="nav-icon">👥</span> Staff Management</a>
-        <a href="{{ url_for('students') }}" class="nav-item "><span class="nav-icon">🎓</span> Students</a>
-        <div class="nav-section-label">Finance</div>
-        <a href="{{ url_for('tuition_payments') }}" class="nav-item "><span class="nav-icon">💰</span> Tuition & Payments</a>
-        <a href="{{ url_for('accounts_receivable') }}" class="nav-item "><span class="nav-icon">📥</span> Accounts Receivable</a>
-        <a href="{{ url_for('accounts_payable') }}" class="nav-item "><span class="nav-icon">📤</span> Accounts Payable</a>
-        <a href="{{ url_for('cash_and_bank') }}" class="nav-item "><span class="nav-icon">🏦</span> Cash & Bank</a>
-        <a href="{{ url_for('grants_donations') }}" class="nav-item "><span class="nav-icon">🎁</span> Grants & Donations</a>
-        <a href="{{ url_for('payroll') }}" class="nav-item "><span class="nav-icon">💼</span> Payroll</a>
+        <a href="{{ url_for('admin_dashboard') }}" class="nav-item"><span class="nav-icon">⊞</span> Dashboard</a>
+        <a href="{{ url_for('manage_staff') }}" class="nav-item"><span class="nav-icon">👥</span> Staff Management</a>
+        <a href="{{ url_for('students') }}" class="nav-item"><span class="nav-icon">🎓</span> Students</a>
+
+        <div class="nav-section-label">Academic</div>
+        <a href="{{ url_for('courses') }}" class="nav-item"><span class="nav-icon">📚</span> Courses & Programs</a>
+        <a href="{{ url_for('timetable') }}" class="nav-item"><span class="nav-icon">📅</span> Timetable</a>
+        <a href="{{ url_for('examinations') }}" class="nav-item"><span class="nav-icon">📝</span> Examinations</a>
+
+        <div class="nav-section-label">Communications</div>
+        <a href="{{ url_for('announcements') }}" class="nav-item"><span class="nav-icon">📢</span> Announcements</a>
+
         <div class="nav-section-label">Operations</div>
-        <a href="{{ url_for('inventory') }}" class="nav-item "><span class="nav-icon">📦</span> Inventory</a>
-        <a href="{{ url_for('reports') }}" class="nav-item "><span class="nav-icon">📊</span> Reports</a>
-        <a href="{{ url_for('settings') }}" class="nav-item "><span class="nav-icon">⚙️</span> Settings</a>
+        <a href="{{ url_for('reports') }}" class="nav-item"><span class="nav-icon">📊</span> Reports</a>
+        <a href="{{ url_for('settings') }}" class="nav-item"><span class="nav-icon">⚙️</span> Settings</a>
     </nav>
     <div class="sidebar-footer">
         <div class="user-info">
@@ -66,42 +67,43 @@
     {% endwith %}
 
     <section class="cards-grid">
-        <div class="card card--blue" style="animation-delay:0s">
-            <div class="card-label">Total Revenue</div>
-            <div class="card-value">KSh {{ "{:,.2f}".format(total_revenue or 0) }}</div>
-            <div class="card-detail">Tuition · Grants · Donations</div>
-            <div class="card-icon">💰</div>
-        </div>
-        <div class="card card--red" style="animation-delay:.08s">
-            <div class="card-label">Total Expenses</div>
-            <div class="card-value">KSh {{ "{:,.2f}".format(total_expenses or 0) }}</div>
-            <div class="card-detail">Salaries · Supplies · Utilities</div>
-            <div class="card-icon">📤</div>
-        </div>
-        <div class="card card--green" style="animation-delay:.16s">
-            <div class="card-label">Accounts Receivable</div>
-            <div class="card-value">KSh {{ "{:,.2f}".format(total_ar or 0) }}</div>
-            <div class="card-detail">Money owed TO the college</div>
-            <div class="card-icon">📥</div>
-        </div>
-        <div class="card card--orange" style="animation-delay:.24s">
-            <div class="card-label">Accounts Payable</div>
-            <div class="card-value">KSh {{ "{:,.2f}".format(total_ap or 0) }}</div>
-            <div class="card-detail">Money owed BY the college</div>
-            <div class="card-icon">🧾</div>
-        </div>
-        <div class="card card--teal" style="animation-delay:.32s">
-            <div class="card-label">Bank Balance</div>
-            <div class="card-value">KSh {{ "{:,.2f}".format(bank_balance or 0) }}</div>
-            <div class="card-detail">Cash &amp; bank combined</div>
-            <div class="card-icon">🏦</div>
-        </div>
-        <div class="card card--purple" style="animation-delay:.4s">
-            <div class="card-label">Payroll This Month</div>
-            <div class="card-value">KSh {{ "{:,.2f}".format(payroll_total or 0) }}</div>
-            <div class="card-detail">{{ staff_count or 0 }} staff members</div>
-            <div class="card-icon">💼</div>
-        </div>
+    <div class="card card--blue" style="animation-delay:0s">
+        <div class="card-label">Total Students</div>
+        <div class="card-value">{{ total_students or 0 }}</div>
+        <div class="card-detail">Enrolled this academic year</div>
+        <div class="card-icon">🎓</div>
+    </div>
+    <div class="card card--green" style="animation-delay:.08s">
+        <div class="card-label">Active Staff</div>
+        <div class="card-value">{{ staff_count or 0 }}</div>
+        <div class="card-detail">Teaching & non-teaching</div>
+        <div class="card-icon">👥</div>
+    </div>
+    <div class="card card--orange" style="animation-delay:.16s">
+        <div class="card-label">Courses & Programs</div>
+        <div class="card-value">{{ total_courses or 0 }}</div>
+        <div class="card-detail">Active programs</div>
+        <div class="card-icon">📚</div>
+    </div>
+    <div class="card card--teal" style="animation-delay:.24s">
+        <div class="card-label">Announcements</div>
+        <div class="card-value">{{ total_announcements or 0 }}</div>
+        <div class="card-detail">Active notices</div>
+        <div class="card-icon">📢</div>
+    </div>
+    <div class="card card--purple" style="animation-delay:.32s">
+        <div class="card-label">Upcoming Exams</div>
+        <div class="card-value">{{ upcoming_exams or 0 }}</div>
+        <div class="card-detail">Scheduled this term</div>
+        <div class="card-icon">📝</div>
+    </div>
+    <div class="card card--red" style="animation-delay:.4s">
+        <div class="card-label">Students Owing Fees</div>
+        <div class="card-value">{{ students_owing or 0 }}</div>
+        <div class="card-detail">Outstanding balances</div>
+        <div class="card-icon">⚠️</div>
+    </div>
+</section>
     </section>
 
     <section class="charts-row">
@@ -121,70 +123,85 @@
         </div>
     </section>
 
-    <section class="bottom-row">
-        <div class="table-card">
-            <div class="table-header">
-                <div class="chart-title">Recent Transactions</div>
-                <a href="{{ url_for('tuition_payments') }}" class="view-all">View All →</a>
-            </div>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>Date</th>
-                        <th>Description</th>
-                        <th>Type</th>
-                        <th>Amount</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% if recent_transactions %}
-                        {% for t in recent_transactions %}
-                        <tr>
-                            <td>{{ t.date }}</td>
-                            <td>{{ t.description }}</td>
-                            <td><span class="tag tag--{{ t.type }}">{{ t.type }}</span></td>
-                            <td class="amount">KSh {{ "{:,.2f}".format(t.amount) }}</td>
-                            <td><span class="status status--{{ t.status }}">{{ t.status }}</span></td>
-                        </tr>
-                        {% endfor %}
-                    {% else %}
-                        <tr>
-                            <td colspan="5" class="empty-state">No transactions recorded yet</td>
-                        </tr>
-                    {% endif %}
-                </tbody>
-            </table>
-        </div>
+   <section class="bottom-row">
 
-        <div class="right-col">
-            <div class="alert-card">
-                <div class="chart-title" style="margin-bottom:14px">⚠️ Inventory Alerts</div>
-                {% if low_stock %}
-                    {% for item in low_stock %}
-                    <div class="alert-item">
-                        <span>{{ item.name }}</span>
-                        <span class="alert-qty">{{ item.quantity }} left</span>
-                    </div>
+    <!-- RECENT STUDENTS -->
+    <div class="table-card">
+        <div class="table-header">
+            <div class="chart-title">Recently Enrolled Students</div>
+            <a href="{{ url_for('students') }}" class="view-all">View All →</a>
+        </div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Student ID</th>
+                    <th>Full Name</th>
+                    <th>Program</th>
+                    <th>Year</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if recent_students %}
+                    {% for s in recent_students %}
+                    <tr>
+                        <td><strong>{{ s.student_id }}</strong></td>
+                        <td>{{ s.full_name }}</td>
+                        <td>{{ s.program }}</td>
+                        <td>Year {{ s.year }}</td>
+                        <td>
+                            <span class="status status--{{ 'paid' if s.status == 'Active' else 'pending' }}">
+                                {{ s.status }}
+                            </span>
+                        </td>
+                    </tr>
                     {% endfor %}
                 {% else %}
-                    <div class="empty-state">All stock levels are healthy ✓</div>
+                    <tr>
+                        <td colspan="5" class="empty-state">No students enrolled yet</td>
+                    </tr>
                 {% endif %}
-            </div>
+            </tbody>
+        </table>
+    </div>
 
-            <div class="alert-card">
-                <div class="chart-title" style="margin-bottom:14px">Quick Actions</div>
-                <div class="quick-actions">
-                    <button class="q-btn" onclick="window.location='{{ url_for('students') }}'">➕ Add Student</button>
-                    <button class="q-btn" onclick="window.location='{{ url_for('tuition_payments') }}'">💳 Record Payment</button>
-                    <button class="q-btn" onclick="window.location='{{ url_for('manage_staff') }}'">👤 Add Staff</button>
-                    <button class="q-btn" onclick="window.location='{{ url_for('inventory') }}'">📦 Update Inventory</button>
-                    <button class="q-btn" onclick="window.location='{{ url_for('reports') }}'">📊 Generate Report</button>
-                    <button class="q-btn" onclick="window.location='{{ url_for('accounts_payable') }}'">💰 Record Expense</button>
+    <div class="right-col">
+
+        <!-- ANNOUNCEMENTS PREVIEW -->
+        <div class="alert-card">
+            <div class="chart-title" style="margin-bottom:14px">📢 Latest Announcements</div>
+            {% if latest_announcements %}
+                {% for a in latest_announcements %}
+                <div class="alert-item">
+                    <span>{{ a.title }}</span>
+                    <span class="alert-qty">{{ a.date }}</span>
                 </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">No announcements yet</div>
+            {% endif %}
+            <a href="{{ url_for('announcements') }}" style="font-size:0.8rem; color:var(--navy); margin-top:10px; display:block;">
+                View all →
+            </a>
+        </div>
+
+        <!-- QUICK ACTIONS -->
+        <div class="alert-card">
+            <div class="chart-title" style="margin-bottom:14px">Quick Actions</div>
+            <div class="quick-actions">
+                <button class="q-btn" onclick="window.location='{{ url_for('students') }}'">➕ Add Student</button>
+                <button class="q-btn" onclick="window.location='{{ url_for('manage_staff') }}'">👤 Add Staff</button>
+                <button class="q-btn" onclick="window.location='{{ url_for('announcements') }}'">📢 Announcement</button>
+                <button class="q-btn" onclick="window.location='{{ url_for('courses') }}'">📚 Add Course</button>
+                <button class="q-btn" onclick="window.location='{{ url_for('examinations') }}'">📝 Schedule Exam</button>
+                <button class="q-btn" onclick="window.location='{{ url_for('reports') }}'">📊 View Reports</button>
             </div>
         </div>
-    </section>
+
+    </div>
+
+</section>
+                    
 
 </main>
 

@@ -189,29 +189,25 @@ def admin_dashboard():
     if session.get('role') != 'admin':
         flash('Access denied.')
         return redirect(url_for('staff_login'))
-    tuition_total   = db.session.query(db.func.sum(Payment.amount)).scalar() or 0
-    grants_total    = db.session.query(db.func.sum(Grant.amount)).filter_by(type='Grant').scalar() or 0
-    donations_total = db.session.query(db.func.sum(Grant.amount)).filter_by(type='Donation').scalar() or 0
-    total_revenue   = tuition_total + grants_total + donations_total
-    total_expenses  = db.session.query(db.func.sum(Expense.amount)).scalar() or 0
-    payroll_total   = db.session.query(db.func.sum(Transaction.amount)).filter_by(type='payroll').scalar() or 0
-    total_ar        = db.session.query(db.func.sum(Student.balance)).scalar() or 0
-    total_ap        = db.session.query(db.func.sum(Expense.amount)).filter_by(status='pending').scalar() or 0
-    paid_income     = db.session.query(db.func.sum(Payment.amount)).scalar() or 0
-    paid_expenses   = db.session.query(db.func.sum(Expense.amount)).filter_by(status='paid').scalar() or 0
-    bank_balance    = paid_income - paid_expenses
-    staff_count     = Staff.query.count()
-    recent_transactions = Transaction.query.order_by(Transaction.id.desc()).limit(10).all()
-    low_stock       = Inventory.query.filter(Inventory.quantity <= Inventory.reorder_level).all()
-    return render_template('admin_dashboard.html',
-        total_revenue=total_revenue, total_expenses=total_expenses,
-        total_ar=total_ar, total_ap=total_ap, bank_balance=bank_balance,
-        payroll_total=payroll_total, staff_count=staff_count,
-        tuition_total=tuition_total, grants_total=grants_total,
-        donations_total=donations_total,
-        recent_transactions=recent_transactions, low_stock=low_stock,
-    )
 
+    total_students      = Student.query.count()
+    staff_count         = Staff.query.count()
+    students_owing      = Student.query.filter(Student.balance > 0).count()
+    total_courses       = 0
+    total_announcements = 0
+    upcoming_exams      = 0
+    recent_students     = Student.query.order_by(Student.id.desc()).limit(5).all()
+    latest_announcements = []
+
+    return render_template('admin_dashboard.html',
+                           total_students=total_students,
+                           staff_count=staff_count,
+                           students_owing=students_owing,
+                           total_courses=total_courses,
+                           total_announcements=total_announcements,
+                           upcoming_exams=upcoming_exams,
+                           recent_students=recent_students,
+                           latest_announcements=latest_announcements)
 
 # ═══════════════════════════════════════════
 # STAFF MANAGEMENT
