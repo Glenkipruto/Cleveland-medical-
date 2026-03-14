@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timetable | Cleveland Medical College</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+    <style>
+        .btn-primary {
+            background:var(--navy); color:white; border:none;
+            padding:10px 20px; border-radius:8px;
+            font-family:'DM Sans',sans-serif; font-size:0.875rem;
+            font-weight:600; cursor:pointer; transition:background .18s;
+            display:inline-flex; align-items:center; gap:6px;
+        }
+        .btn-primary:hover { background:var(--navy-lt); }
+        .btn-danger {
+            background:#fee2e2; color:#991b1b; border:none;
+            padding:6px 14px; border-radius:6px; font-size:0.78rem;
+            cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:600;
+        }
+        .tt-form {
+            display:grid; grid-template-columns:1fr 1fr 1fr;
+            gap:16px;
+        }
+        .tt-form .full { grid-column:1/-1; }
+        .form-field { display:flex; flex-direction:column; gap:5px; }
+        .form-field label {
+            font-size:0.75rem; font-weight:600; color:var(--muted);
+            text-transform:uppercase; letter-spacing:0.5px;
+        }
+        .form-field input,
+        .form-field select {
+            padding:10px 12px; border:1px solid var(--border);
+            border-radius:7px; font-family:'DM Sans',sans-serif;
+            font-size:0.875rem; outline:none; width:100%;
+            transition:border .2s;
+        }
+        .form-field input:focus,
+        .form-field select:focus { border-color:var(--navy); }
+        .search-input {
+            padding:10px 16px; border:1px solid var(--border);
+            border-radius:8px; font-family:'DM Sans',sans-serif;
+            font-size:0.9rem; outline:none; width:220px;
+        }
+        .search-input:focus { border-color:var(--navy); }
+        .day-badge {
+            padding:3px 10px; border-radius:20px;
+            font-size:0.75rem; font-weight:600;
+        }
+        .day-Monday    { background:#dbeafe; color:#1e40af; }
+        .day-Tuesday   { background:#dcfce7; color:#166534; }
+        .day-Wednesday { background:#fef9c3; color:#854d0e; }
+        .day-Thursday  { background:#f3e8ff; color:#6b21a8; }
+        .day-Friday    { background:#fee2e2; color:#991b1b; }
+        .day-Saturday  { background:#f1f5f9; color:#475569; }
+        .filter-tabs {
+            display:flex; gap:6px; margin-bottom:16px;
+            flex-wrap:wrap;
+        }
+        .filter-tab {
+            padding:6px 14px; border-radius:20px;
+            font-size:0.8rem; font-weight:600;
+            cursor:pointer; border:1px solid var(--border);
+            background:white; color:var(--muted);
+            transition:all .18s;
+        }
+        .filter-tab.active,
+        .filter-tab:hover {
+            background:var(--navy); color:white; border-color:var(--navy);
+        }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon">CMC</div>
+        <div><div class="brand-name">Cleveland</div><div class="brand-sub">Medical College</div></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="{{ url_for('admin_dashboard') }}" class="nav-item"><span class="nav-icon">⊞</span> Dashboard</a>
+        <a href="{{ url_for('manage_staff') }}" class="nav-item"><span class="nav-icon">👥</span> Staff Management</a>
+        <a href="{{ url_for('students') }}" class="nav-item"><span class="nav-icon">🎓</span> Students</a>
+
+        <div class="nav-section-label">Academic</div>
+        <a href="{{ url_for('courses') }}" class="nav-item"><span class="nav-icon">📚</span> Courses & Programs</a>
+        <a href="{{ url_for('timetable') }}" class="nav-item active"><span class="nav-icon">📅</span> Timetable</a>
+        <a href="{{ url_for('examinations') }}" class="nav-item"><span class="nav-icon">📝</span> Examinations</a>
+
+        <div class="nav-section-label">Communications</div>
+        <a href="{{ url_for('announcements') }}" class="nav-item"><span class="nav-icon">📢</span> Announcements</a>
+
+        <div class="nav-section-label">Finance</div>
+        <a href="{{ url_for('finance_overview') }}" class="nav-item"><span class="nav-icon">👁️</span> Finance Overview</a>
+
+        <div class="nav-section-label">Operations</div>
+        <a href="{{ url_for('reports') }}" class="nav-item"><span class="nav-icon">📊</span> Reports</a>
+        <a href="{{ url_for('settings') }}" class="nav-item"><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ session.get('username','AD')[0] }}</div>
+            <div>
+                <div class="user-name">{{ session.get('username','Administrator') }}</div>
+                <div class="user-role">{{ session.get('role','') | replace('_','  ') | title }}</div>
+            </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+</aside>
+
+<main class="main">
+
+    <header class="topbar">
+        <div>
+            <h1 class="page-title">Timetable</h1>
+            <p class="page-subtitle">Manage class schedules · Academic Year 2025/2026</p>
+        </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="flash-msg" style="{% if category=='success' %}background:#dcfce7;border-color:#86efac;color:#166534;{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div style="padding:0 32px 32px;">
+
+        <!-- ADD TIMETABLE FORM -->
+        <div class="table-card" style="margin-top:24px; margin-bottom:24px;">
+            <div class="chart-title" style="margin-bottom:18px;">📅 Add Class Schedule</div>
+            <form method="POST" action="{{ url_for('add_timetable') }}">
+                <div class="tt-form">
+                    <div class="form-field">
+                        <label>Program / Course</label>
+                        <select name="program" required>
+                            <option value="">Select...</option>
+                            {% for course in courses %}
+                            <option value="{{ course.name }}">{{ course.name }}</option>
+                            {% else %}
+                            <option value="Clinical Medicine">Clinical Medicine</option>
+                            <option value="Nursing">Nursing</option>
+                            <option value="Medical Laboratory">Medical Laboratory</option>
+                            <option value="Pharmacy">Pharmacy</option>
+                            <option value="Health Records">Health Records</option>
+                            <option value="Nutrition & Dietetics">Nutrition & Dietetics</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>Subject / Unit</label>
+                        <input type="text" name="subject"
+                               placeholder="e.g. Human Anatomy" required>
+                    </div>
+                    <div class="form-field">
+                        <label>Lecturer</label>
+                        <input type="text" name="lecturer"
+                               placeholder="e.g. Dr. Njoroge" required>
+                    </div>
+                    <div class="form-field">
+                        <label>Day</label>
+                        <select name="day" required>
+                            <option value="">Select...</option>
+                            <option>Monday</option>
+                            <option>Tuesday</option>
+                            <option>Wednesday</option>
+                            <option>Thursday</option>
+                            <option>Friday</option>
+                            <option>Saturday</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>Start Time</label>
+                        <input type="time" name="start_time" required>
+                    </div>
+                    <div class="form-field">
+                        <label>End Time</label>
+                        <input type="time" name="end_time" required>
+                    </div>
+                    <div class="form-field">
+                        <label>Room / Venue</label>
+                        <input type="text" name="room"
+                               placeholder="e.g. Lab 1, Room 3" required>
+                    </div>
+                    <div class="form-field">
+                        <label>Year of Study</label>
+                        <select name="year">
+                            <option value="Year 1">Year 1</option>
+                            <option value="Year 2">Year 2</option>
+                            <option value="Year 3">Year 3</option>
+                            <option value="Year 4">Year 4</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>Semester</label>
+                        <select name="semester">
+                            <option value="Semester 1">Semester 1</option>
+                            <option value="Semester 2">Semester 2</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="margin-top:14px;">
+                    <button type="submit" class="btn-primary">📅 Add to Timetable</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- FILTER TABS -->
+        <div class="filter-tabs">
+            <div class="filter-tab active" onclick="filterDay('all', this)">All Days</div>
+            <div class="filter-tab" onclick="filterDay('Monday', this)">Monday</div>
+            <div class="filter-tab" onclick="filterDay('Tuesday', this)">Tuesday</div>
+            <div class="filter-tab" onclick="filterDay('Wednesday', this)">Wednesday</div>
+            <div class="filter-tab" onclick="filterDay('Thursday', this)">Thursday</div>
+            <div class="filter-tab" onclick="filterDay('Friday', this)">Friday</div>
+            <div class="filter-tab" onclick="filterDay('Saturday', this)">Saturday</div>
+        </div>
+
+        <!-- TIMETABLE TABLE -->
+        <div class="table-card">
+            <div class="table-header">
+                <div class="chart-title">Class Schedule</div>
+                <input type="text" class="search-input"
+                       placeholder="🔍 Search..."
+                       onkeyup="searchTable(this)">
+            </div>
+            <table class="data-table" id="tt-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Program</th>
+                        <th>Subject</th>
+                        <th>Lecturer</th>
+                        <th>Day</th>
+                        <th>Time</th>
+                        <th>Room</th>
+                        <th>Year</th>
+                        <th>Semester</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tt in timetable %}
+                    <tr data-day="{{ tt.day }}">
+                        <td>{{ loop.index }}</td>
+                        <td><strong>{{ tt.program }}</strong></td>
+                        <td>{{ tt.subject }}</td>
+                        <td>{{ tt.lecturer }}</td>
+                        <td>
+                            <span class="day-badge day-{{ tt.day }}">
+                                {{ tt.day }}
+                            </span>
+                        </td>
+                        <td>{{ tt.start_time }} – {{ tt.end_time }}</td>
+                        <td>{{ tt.room }}</td>
+                        <td>{{ tt.year }}</td>
+                        <td>{{ tt.semester }}</td>
+                        <td>
+                            <form method="POST"
+                                  action="{{ url_for('delete_timetable', tt_id=tt.id) }}"
+                                  onsubmit="return confirm('Delete this schedule?')">
+                                <button type="submit" class="btn-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="empty-state">
+                            No schedules added yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</main>
+
+<script>
+function filterDay(day, el) {
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('#tt-table tbody tr').forEach(row => {
+        if (day === 'all') {
+            row.style.display = '';
+        } else {
+            row.style.display = row.dataset.day === day ? '' : 'none';
+        }
+    });
+}
+
+function searchTable(input) {
+    const q = input.value.toLowerCase();
+    document.querySelectorAll('#tt-table tbody tr').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+</script>
+
+</body>
+</html>

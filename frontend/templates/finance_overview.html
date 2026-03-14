@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Overview | Cleveland Medical College</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+    <style>
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 18px;
+            margin-bottom: 24px;
+        }
+        .overview-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+        .overview-card-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--navy);
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        .overview-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f8fafc;
+            font-size: 0.875rem;
+        }
+        .overview-row:last-child { border-bottom: none; }
+        .overview-label { color: var(--muted); }
+        .overview-value { font-weight: 600; color: var(--text); }
+        .value-green { color: #166534; }
+        .value-red   { color: #991b1b; }
+        .value-blue  { color: #1e40af; }
+        .readonly-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: #fef9c3; color: #854d0e;
+            padding: 6px 14px; border-radius: 20px;
+            font-size: 0.78rem; font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon">CMC</div>
+        <div><div class="brand-name">Cleveland</div><div class="brand-sub">Medical College</div></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="{{ url_for('admin_dashboard') }}" class="nav-item"><span class="nav-icon">⊞</span> Dashboard</a>
+        <a href="{{ url_for('manage_staff') }}" class="nav-item"><span class="nav-icon">👥</span> Staff Management</a>
+        <a href="{{ url_for('students') }}" class="nav-item"><span class="nav-icon">🎓</span> Students</a>
+
+        <div class="nav-section-label">Academic</div>
+        <a href="{{ url_for('courses') }}" class="nav-item"><span class="nav-icon">📚</span> Courses & Programs</a>
+        <a href="{{ url_for('timetable') }}" class="nav-item"><span class="nav-icon">📅</span> Timetable</a>
+        <a href="{{ url_for('examinations') }}" class="nav-item"><span class="nav-icon">📝</span> Examinations</a>
+
+        <div class="nav-section-label">Communications</div>
+        <a href="{{ url_for('announcements') }}" class="nav-item"><span class="nav-icon">📢</span> Announcements</a>
+
+        <div class="nav-section-label">Finance</div>
+        <a href="{{ url_for('finance_overview') }}" class="nav-item active"><span class="nav-icon">👁️</span> Finance Overview</a>
+
+        <div class="nav-section-label">Operations</div>
+        <a href="{{ url_for('reports') }}" class="nav-item"><span class="nav-icon">📊</span> Reports</a>
+        <a href="{{ url_for('settings') }}" class="nav-item"><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ session.get('username','AD')[0] }}</div>
+            <div>
+                <div class="user-name">{{ session.get('username','Administrator') }}</div>
+                <div class="user-role">{{ session.get('role','') | replace('_','  ') | title }}</div>
+            </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+</aside>
+
+<main class="main">
+
+    <header class="topbar">
+        <div>
+            <h1 class="page-title">Finance Overview</h1>
+            <p class="page-subtitle">Read-only financial summary · Academic Year 2025/2026</p>
+        </div>
+        <span class="readonly-badge">👁️ View Only — Contact Finance Manager to make changes</span>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="flash-msg">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div style="padding:0 32px 32px;">
+
+        <!-- TOP SUMMARY CARDS -->
+        <section class="cards-grid" style="margin-top:24px;">
+            <div class="card card--blue">
+                <div class="card-label">Total Income</div>
+                <div class="card-value">KSh {{ "{:,.0f}".format(total_income) }}</div>
+                <div class="card-detail">Tuition + Grants + Donations</div>
+                <div class="card-icon">💰</div>
+            </div>
+            <div class="card card--red">
+                <div class="card-label">Total Expenses</div>
+                <div class="card-value">KSh {{ "{:,.0f}".format(total_expenses) }}</div>
+                <div class="card-detail">Payables + Payroll</div>
+                <div class="card-icon">📤</div>
+            </div>
+            <div class="card card--green">
+                <div class="card-label">Net Balance</div>
+                <div class="card-value">KSh {{ "{:,.0f}".format(net_balance) }}</div>
+                <div class="card-detail">Income minus expenses</div>
+                <div class="card-icon">🏦</div>
+            </div>
+            <div class="card card--orange">
+                <div class="card-label">Outstanding Fees</div>
+                <div class="card-value">KSh {{ "{:,.0f}".format(outstanding_fees) }}</div>
+                <div class="card-detail">Pending + Overdue</div>
+                <div class="card-icon">⏳</div>
+            </div>
+        </section>
+
+        <!-- OVERVIEW CARDS GRID -->
+        <div class="overview-grid">
+
+            <!-- TUITION -->
+            <div class="overview-card">
+                <div class="overview-card-title">💰 Tuition & Payments</div>
+                <div class="overview-row">
+                    <span class="overview-label">Total Collected</span>
+                    <span class="overview-value value-green">KSh {{ "{:,.0f}".format(tuition_collected) }}</span>
+                </div>
+                <div class="overview-row">
+                    <span class="overview-label">Pending</span>
+                    <span class="overview-value value-red">KSh {{ "{:,.0f}".format(tuition_pending) }}</span>
+                </div>
+                <div class="overview-row">
+                    <span class="overview-label">Overdue</span>
+                    <span class="overview-value value-red">KSh {{ "{:,.0f}".format(tuition_overdue) }}</span>
+                </div>
+                <div class="overview-row">
+                    <span class="overview-label">Total Records</span>
+                    <span class="overview-value value-blue">{{ tuition_records }}</span>
+                </div>
+            </div>
+
+            <!-- PAYROLL -->
+            <div class="overview-card">
+                <div class="overview-card-title">👥 Payroll</div>
+                <div class="overview-row">
+                    <span class="overview-label">Total Staff</span>
+                    <span class="overview-value value-blue">{{ payroll_staff }}</span>
+                </div>
+                <div class="overview-row">
+                    <span class="overview-label">Monthly Payroll</span>
+                    <span class="overview-value value-red">KSh {{ "{:,.0f}".format(payroll_total) }}</span>
+                </div>
+                <div class="overview-row">
+                    <span class="overview-label">Paid</span>
+                    <span class="overview-value value-green">KSh {{ "{:,.0f}".format(payroll_paid) }}</span>
+                </div>
+                <div class="overview-row">
+                    <span class="overview-label">Pending</span>
+                    <span class="overview-value value-red">KSh {{ "{:,.0f}".format(payroll_pending) }}</span>
+                </div>
+            </div>
+
+            <!-- GRANTS & DONATIONS -->
+            <div class="overview-card">
+                <div class="overview-card-title">🎁 Grants & Donations</div>
+                <div class="overview-row">
+                    <span class="overview-label">Total Grants</span>
+                    <span class="overview-value value-green">KSh {{ "{:,.0f}".format(grants_total) }}</span>
+                </div>
+                <div class="overview-row">
+                    <span class="overview-label">Total Donations</span>
+                    <span class="overview-value value-green">KSh {{ "{:,.0f}".format(donations_total) }}</span>
+                </div>
+                <div class="overview-row">
+                    <span class="overview-label">Total Funding</span>
+                    <span class="overview-value value-blue">KSh {{ "{:,.0f}".format(grants_total + donations_total) }}</span>
+                </div>
+            </div>
+
+            <!-- CASH & BANK -->
+            <div class="overview-card">
+                <div class="overview-card-title">🏦 Cash & Bank</div>
+                <div class="overview-row">
+                    <span class="overview-label">Total Deposits</span>
+                    <span class="overview-value value-green">KSh {{ "{:,.0f}".format(cash_deposits) }}</span>
+                </div>
+                <div class="overview-row">
+                    <span class="overview-label">Total Withdrawals</span>
+                    <span class="overview-value value-red">KSh {{ "{:,.0f}".format(cash_withdrawals) }}</span>
+                </div>
+                <div class="overview-row">
+                    <span class="overview-label">Net Cash Flow</span>
+                    <span class="overview-value {{ 'value-green' if cash_deposits >= cash_withdrawals else 'value-red' }}">
+                        KSh {{ "{:,.0f}".format(cash_deposits - cash_withdrawals) }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- ACCOUNTS PAYABLE -->
+            <div class="overview-card">
+                <div class="overview-card-title">📤 Accounts Payable</div>
+                <div class="overview-row">
+                    <span class="overview-label">Total Bills</span>
+                    <span class="overview-value value-blue">{{ payable_records }}</span>
+                </div>
+                <div class="overview-row">
+                    <span class="overview-label">Total Paid</span>
+                    <span class="overview-value value-green">KSh {{ "{:,.0f}".format(payable_paid) }}</span>
+                </div>
+                <div class="overview-row">
+                    <span class="overview-label">Pending</span>
+                    <span class="overview-value value-red">KSh {{ "{:,.0f}".format(payable_pending) }}</span>
+                </div>
+                <div class="overview-row">
+                    <span class="overview-label">Overdue</span>
+                    <span class="overview-value value-red">KSh {{ "{:,.0f}".format(payable_overdue) }}</span>
+                </div>
+            </div>
+
+            <!-- INVENTORY -->
+            <div class="overview-card">
+                <div class="overview-card-title">📦 Inventory</div>
+                <div class="overview-row">
+                    <span class="overview-label">Total Items</span>
+                    <span class="overview-value value-blue">{{ inventory_items }}</span>
+                </div>
+                <div class="overview-row">
+                    <span class="overview-label">Total Value</span>
+                    <span class="overview-value value-green">KSh {{ "{:,.0f}".format(inventory_value) }}</span>
+                </div>
+                <div class="overview-row">
+                    <span class="overview-label">Low Stock Items</span>
+                    <span class="overview-value value-red">{{ inventory_low_stock }}</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</main>
+
+</body>
+</html>

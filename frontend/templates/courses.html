@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Courses & Programs | Cleveland Medical College</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+    <style>
+        .btn-primary {
+            background:var(--navy); color:white; border:none;
+            padding:10px 20px; border-radius:8px;
+            font-family:'DM Sans',sans-serif; font-size:0.875rem;
+            font-weight:600; cursor:pointer; transition:background .18s;
+            display:inline-flex; align-items:center; gap:6px;
+        }
+        .btn-primary:hover { background:var(--navy-lt); }
+        .btn-danger {
+            background:#fee2e2; color:#991b1b; border:none;
+            padding:6px 14px; border-radius:6px; font-size:0.78rem;
+            cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:600;
+        }
+        .courses-form {
+            display:grid; grid-template-columns:1fr 1fr;
+            gap:16px;
+        }
+        .courses-form .full { grid-column:1/-1; }
+        .form-field { display:flex; flex-direction:column; gap:5px; }
+        .form-field label {
+            font-size:0.75rem; font-weight:600; color:var(--muted);
+            text-transform:uppercase; letter-spacing:0.5px;
+        }
+        .form-field input,
+        .form-field select,
+        .form-field textarea {
+            padding:10px 12px; border:1px solid var(--border);
+            border-radius:7px; font-family:'DM Sans',sans-serif;
+            font-size:0.875rem; outline:none; width:100%;
+            transition:border .2s;
+        }
+        .form-field input:focus,
+        .form-field select:focus,
+        .form-field textarea:focus { border-color:var(--navy); }
+        .form-field textarea { resize:vertical; min-height:80px; }
+        .search-input {
+            padding:10px 16px; border:1px solid var(--border);
+            border-radius:8px; font-family:'DM Sans',sans-serif;
+            font-size:0.9rem; outline:none; width:220px;
+        }
+        .search-input:focus { border-color:var(--navy); }
+        .duration-badge {
+            background:#eff6ff; color:#1e40af;
+            padding:3px 10px; border-radius:20px;
+            font-size:0.75rem; font-weight:600;
+        }
+        .status-active   { background:#dcfce7; color:#166534; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .status-inactive { background:#fee2e2; color:#991b1b; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon">CMC</div>
+        <div><div class="brand-name">Cleveland</div><div class="brand-sub">Medical College</div></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="{{ url_for('admin_dashboard') }}" class="nav-item"><span class="nav-icon">⊞</span> Dashboard</a>
+        <a href="{{ url_for('manage_staff') }}" class="nav-item"><span class="nav-icon">👥</span> Staff Management</a>
+        <a href="{{ url_for('students') }}" class="nav-item"><span class="nav-icon">🎓</span> Students</a>
+
+        <div class="nav-section-label">Academic</div>
+        <a href="{{ url_for('courses') }}" class="nav-item active"><span class="nav-icon">📚</span> Courses & Programs</a>
+        <a href="{{ url_for('timetable') }}" class="nav-item"><span class="nav-icon">📅</span> Timetable</a>
+        <a href="{{ url_for('examinations') }}" class="nav-item"><span class="nav-icon">📝</span> Examinations</a>
+
+        <div class="nav-section-label">Communications</div>
+        <a href="{{ url_for('announcements') }}" class="nav-item"><span class="nav-icon">📢</span> Announcements</a>
+
+        <div class="nav-section-label">Finance</div>
+        <a href="{{ url_for('finance_overview') }}" class="nav-item"><span class="nav-icon">👁️</span> Finance Overview</a>
+
+        <div class="nav-section-label">Operations</div>
+        <a href="{{ url_for('reports') }}" class="nav-item"><span class="nav-icon">📊</span> Reports</a>
+        <a href="{{ url_for('settings') }}" class="nav-item"><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ session.get('username','AD')[0] }}</div>
+            <div>
+                <div class="user-name">{{ session.get('username','Administrator') }}</div>
+                <div class="user-role">{{ session.get('role','') | replace('_','  ') | title }}</div>
+            </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+</aside>
+
+<main class="main">
+
+    <header class="topbar">
+        <div>
+            <h1 class="page-title">Courses & Programs</h1>
+            <p class="page-subtitle">Manage college programs and courses</p>
+        </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="flash-msg" style="{% if category=='success' %}background:#dcfce7;border-color:#86efac;color:#166534;{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div style="padding:0 32px 32px;">
+
+        <!-- ADD COURSE FORM -->
+        <div class="table-card" style="margin-top:24px; margin-bottom:24px;">
+            <div class="chart-title" style="margin-bottom:18px;">📚 Add New Course / Program</div>
+            <form method="POST" action="{{ url_for('add_course') }}">
+                <div class="courses-form">
+                    <div class="form-field">
+                        <label>Course Code</label>
+                        <input type="text" name="code" placeholder="e.g. CMC-NUR-01" required>
+                    </div>
+                    <div class="form-field">
+                        <label>Course Name</label>
+                        <input type="text" name="name" placeholder="e.g. Diploma in Nursing" required>
+                    </div>
+                    <div class="form-field">
+                        <label>Department</label>
+                        <select name="department" required>
+                            <option value="">Select...</option>
+                            <option>Medical Sciences</option>
+                            <option>Nursing</option>
+                            <option>Pharmacy</option>
+                            <option>Medical Laboratory</option>
+                            <option>Health Records</option>
+                            <option>Nutrition & Dietetics</option>
+                            <option>Clinical Medicine</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>Duration</label>
+                        <select name="duration" required>
+                            <option value="">Select...</option>
+                            <option>1 Year</option>
+                            <option>2 Years</option>
+                            <option>3 Years</option>
+                            <option>4 Years</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>Tuition Fee (KSh)</label>
+                        <input type="number" name="tuition_fee" placeholder="0" min="0" required>
+                    </div>
+                    <div class="form-field">
+                        <label>Capacity (Students)</label>
+                        <input type="number" name="capacity" placeholder="e.g. 50" min="1" required>
+                    </div>
+                    <div class="form-field">
+                        <label>Status</label>
+                        <select name="status">
+                            <option value="Active">Active</option>
+                            <option value="Inactive">Inactive</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>Intake Year</label>
+                        <input type="number" name="intake_year" value="2026">
+                    </div>
+                    <div class="form-field full">
+                        <label>Description</label>
+                        <textarea name="description" placeholder="Brief description of the course..."></textarea>
+                    </div>
+                </div>
+                <div style="margin-top:14px;">
+                    <button type="submit" class="btn-primary">📚 Add Course</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- COURSES TABLE -->
+        <div class="table-card">
+            <div class="table-header">
+                <div class="chart-title">All Courses & Programs</div>
+                <input type="text" class="search-input"
+                       placeholder="🔍 Search courses..."
+                       onkeyup="filterTable(this)">
+            </div>
+            <table class="data-table" id="courses-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Code</th>
+                        <th>Course Name</th>
+                        <th>Department</th>
+                        <th>Duration</th>
+                        <th>Tuition Fee</th>
+                        <th>Capacity</th>
+                        <th>Intake</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for course in courses %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><strong>{{ course.code }}</strong></td>
+                        <td>{{ course.name }}</td>
+                        <td>{{ course.department }}</td>
+                        <td><span class="duration-badge">{{ course.duration }}</span></td>
+                        <td>KSh {{ "{:,.0f}".format(course.tuition_fee) }}</td>
+                        <td>{{ course.capacity }}</td>
+                        <td>{{ course.intake_year }}</td>
+                        <td>
+                            <span class="status-{{ course.status.lower() }}">
+                                {{ course.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <form method="POST"
+                                  action="{{ url_for('delete_course', course_id=course.id) }}"
+                                  onsubmit="return confirm('Delete this course?')">
+                                <button type="submit" class="btn-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="empty-state">No courses added yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</main>
+
+<script>
+function filterTable(input) {
+    const q = input.value.toLowerCase();
+    document.querySelectorAll('#courses-table tbody tr').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+</script>
+
+</body>
+</html>

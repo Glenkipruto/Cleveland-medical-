@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Announcements | Cleveland Medical College</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+    <style>
+        .btn-primary {
+            background:var(--navy); color:white; border:none;
+            padding:10px 20px; border-radius:8px;
+            font-family:'DM Sans',sans-serif; font-size:0.875rem;
+            font-weight:600; cursor:pointer; transition:background .18s;
+            text-decoration:none; display:inline-flex; align-items:center; gap:6px;
+        }
+        .btn-primary:hover { background:var(--navy-lt); }
+        .btn-danger {
+            background:#fee2e2; color:#991b1b; border:none;
+            padding:6px 14px; border-radius:6px; font-size:0.78rem;
+            cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:600;
+        }
+        .ann-form {
+            display:grid; grid-template-columns:1fr 1fr;
+            gap:16px; margin-bottom:10px;
+        }
+        .ann-form .full { grid-column:1/-1; }
+        .form-field { display:flex; flex-direction:column; gap:5px; }
+        .form-field label {
+            font-size:0.75rem; font-weight:600; color:var(--muted);
+            text-transform:uppercase; letter-spacing:0.5px;
+        }
+        .form-field input,
+        .form-field select,
+        .form-field textarea {
+            padding:10px 12px; border:1px solid var(--border);
+            border-radius:7px; font-family:'DM Sans',sans-serif;
+            font-size:0.875rem; outline:none; width:100%;
+            transition:border .2s;
+        }
+        .form-field input:focus,
+        .form-field select:focus,
+        .form-field textarea:focus { border-color:var(--navy); }
+        .form-field textarea { resize:vertical; min-height:90px; }
+        .priority-normal  { background:#dbeafe; color:#1e40af; }
+        .priority-important { background:#fef9c3; color:#854d0e; }
+        .priority-urgent  { background:#fee2e2; color:#991b1b; }
+        .audience-badge { background:#f1f5f9; color:#475569; }
+        .search-input {
+            flex:1; padding:10px 16px; border:1px solid var(--border);
+            border-radius:8px; font-family:'DM Sans',sans-serif;
+            font-size:0.9rem; outline:none;
+        }
+        .search-input:focus { border-color:var(--navy); }
+        .ann-message {
+            max-width:300px; white-space:nowrap;
+            overflow:hidden; text-overflow:ellipsis;
+            color:var(--muted); font-size:0.85rem;
+        }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon">CMC</div>
+        <div><div class="brand-name">Cleveland</div><div class="brand-sub">Medical College</div></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="{{ url_for('admin_dashboard') }}" class="nav-item"><span class="nav-icon">⊞</span> Dashboard</a>
+        <a href="{{ url_for('manage_staff') }}" class="nav-item"><span class="nav-icon">👥</span> Staff Management</a>
+        <a href="{{ url_for('students') }}" class="nav-item"><span class="nav-icon">🎓</span> Students</a>
+
+        <div class="nav-section-label">Academic</div>
+        <a href="{{ url_for('courses') }}" class="nav-item"><span class="nav-icon">📚</span> Courses & Programs</a>
+        <a href="{{ url_for('timetable') }}" class="nav-item"><span class="nav-icon">📅</span> Timetable</a>
+        <a href="{{ url_for('examinations') }}" class="nav-item"><span class="nav-icon">📝</span> Examinations</a>
+
+        <div class="nav-section-label">Communications</div>
+        <a href="{{ url_for('announcements') }}" class="nav-item active"><span class="nav-icon">📢</span> Announcements</a>
+
+        <div class="nav-section-label">Finance</div>
+        <a href="{{ url_for('finance_overview') }}" class="nav-item"><span class="nav-icon">👁️</span> Finance Overview</a>
+
+        <div class="nav-section-label">Operations</div>
+        <a href="{{ url_for('reports') }}" class="nav-item"><span class="nav-icon">📊</span> Reports</a>
+        <a href="{{ url_for('settings') }}" class="nav-item"><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ session.get('username','AD')[0] }}</div>
+            <div>
+                <div class="user-name">{{ session.get('username','Administrator') }}</div>
+                <div class="user-role">{{ session.get('role','') | replace('_','  ') | title }}</div>
+            </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+</aside>
+
+<main class="main">
+
+    <header class="topbar">
+        <div>
+            <h1 class="page-title">Announcements</h1>
+            <p class="page-subtitle">Post and manage college announcements</p>
+        </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="flash-msg" style="{% if category=='success' %}background:#dcfce7;border-color:#86efac;color:#166534;{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div style="padding:0 32px;">
+
+        <!-- ADD ANNOUNCEMENT FORM -->
+        <div class="table-card" style="margin-bottom:24px;">
+            <div class="chart-title" style="margin-bottom:18px;">📢 Post New Announcement</div>
+            <form method="POST" action="{{ url_for('add_announcement') }}">
+                <div class="ann-form">
+                    <div class="form-field full">
+                        <label>Title</label>
+                        <input type="text" name="title" placeholder="e.g. End of Semester Exams Schedule" required>
+                    </div>
+                    <div class="form-field full">
+                        <label>Message</label>
+                        <textarea name="message" placeholder="Write the full announcement here..." required></textarea>
+                    </div>
+                    <div class="form-field">
+                        <label>Audience</label>
+                        <select name="audience" required>
+                            <option value="All">All — Students & Staff</option>
+                            <option value="Students">Students Only</option>
+                            <option value="Staff">Staff Only</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>Priority</label>
+                        <select name="priority" required>
+                            <option value="Normal">Normal</option>
+                            <option value="Important">Important</option>
+                            <option value="Urgent">Urgent</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>Date</label>
+                        <input type="date" name="date" required>
+                    </div>
+                    <div class="form-field">
+                        <label>Posted By</label>
+                        <input type="text" name="posted_by"
+                               value="{{ session.get('username', '') }}" readonly>
+                    </div>
+                </div>
+                <div style="margin-top:8px;">
+                    <button type="submit" class="btn-primary">📢 Post Announcement</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- ANNOUNCEMENTS TABLE -->
+        <div class="table-card">
+            <div class="table-header">
+                <div class="chart-title">All Announcements</div>
+                <input type="text" class="search-input" style="width:220px;"
+                       placeholder="🔍 Search..." onkeyup="filterTable(this)">
+            </div>
+            <table class="data-table" id="ann-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Title</th>
+                        <th>Message</th>
+                        <th>Audience</th>
+                        <th>Priority</th>
+                        <th>Date</th>
+                        <th>Posted By</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ann in announcements %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><strong>{{ ann.title }}</strong></td>
+                        <td><div class="ann-message">{{ ann.message }}</div></td>
+                        <td>
+                            <span class="status-badge audience-badge">
+                                {{ ann.audience }}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-badge priority-{{ ann.priority.lower() }}">
+                                {{ ann.priority }}
+                            </span>
+                        </td>
+                        <td>{{ ann.date }}</td>
+                        <td>{{ ann.posted_by }}</td>
+                        <td>
+                            <form method="POST"
+                                  action="{{ url_for('delete_announcement', ann_id=ann.id) }}"
+                                  onsubmit="return confirm('Delete this announcement?')">
+                                <button type="submit" class="btn-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="empty-state">No announcements posted yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</main>
+
+<script>
+function filterTable(input) {
+    const q = input.value.toLowerCase();
+    document.querySelectorAll('#ann-table tbody tr').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+</script>
+
+</body>
+</html>

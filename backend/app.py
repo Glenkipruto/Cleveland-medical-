@@ -19,31 +19,17 @@ db = SQLAlchemy(app)
 
 class Staff(db.Model):
     __tablename__ = 'staff'
-    id       = db.Column(db.Integer, primary_key=True)
-    staff_id = db.Column(db.String(50), unique=True)
-    email    = db.Column(db.String(100), unique=True)
-    password = db.Column(db.String(200))
-    role     = db.Column(db.String(50))
-
-class Transaction(db.Model):
-    __tablename__ = 'transactions'
-    id          = db.Column(db.Integer, primary_key=True)
-    date        = db.Column(db.String(20))
-    description = db.Column(db.String(200))
-    type        = db.Column(db.String(50))
-    amount      = db.Column(db.Float, default=0)
-    status      = db.Column(db.String(20))
-
-class Inventory(db.Model):
-    __tablename__ = 'inventory'
-    id            = db.Column(db.Integer, primary_key=True)
-    name          = db.Column(db.String(100))
-    category      = db.Column(db.String(50), default='Other')
-    unit          = db.Column(db.String(20), default='pcs')
-    quantity      = db.Column(db.Integer, default=0)
-    unit_price    = db.Column(db.Float, default=0)
-    reorder_level = db.Column(db.Integer, default=10)
-
+    id             = db.Column(db.Integer,     primary_key=True)
+    staff_id       = db.Column(db.String(50),  unique=True)
+    email          = db.Column(db.String(100), unique=True)
+    password       = db.Column(db.String(200))
+    role           = db.Column(db.String(50))
+    full_name      = db.Column(db.String(200), nullable=True)
+    department     = db.Column(db.String(100), nullable=True)
+    job_title      = db.Column(db.String(100), nullable=True)
+    phone          = db.Column(db.String(20),  nullable=True)
+    
+    courses_taught = db.Column(db.Text,        nullable=True)
 class Student(db.Model):
     __tablename__ = 'students'
     id          = db.Column(db.Integer, primary_key=True)
@@ -63,6 +49,30 @@ class Student(db.Model):
     balance     = db.Column(db.Float, default=0)
     status      = db.Column(db.String(30), default='Active')
     payments    = db.relationship('Payment', backref='student', lazy=True)
+
+class Course(db.Model):
+    __tablename__ = 'courses'
+    id          = db.Column(db.Integer,     primary_key=True)
+    code        = db.Column(db.String(50),  nullable=False, unique=True)
+    name        = db.Column(db.String(200), nullable=False)
+    department  = db.Column(db.String(100), nullable=False)
+    duration    = db.Column(db.String(20),  nullable=False)
+    tuition_fee = db.Column(db.Float,       default=0)
+    capacity    = db.Column(db.Integer,     default=50)
+    intake_year = db.Column(db.Integer,     default=2026)
+    description = db.Column(db.Text,        nullable=True)
+    status      = db.Column(db.String(20),  default='Active')
+
+
+class Announcement(db.Model):
+    __tablename__ = 'announcements'
+    id        = db.Column(db.Integer,     primary_key=True)
+    title     = db.Column(db.String(200), nullable=False)
+    message   = db.Column(db.Text,        nullable=False)
+    audience  = db.Column(db.String(20),  default='All')
+    priority  = db.Column(db.String(20),  default='Normal')
+    date      = db.Column(db.String(20),  nullable=False)
+    posted_by = db.Column(db.String(100), nullable=False)
 
 class Payment(db.Model):
     __tablename__ = 'payments'
@@ -125,6 +135,54 @@ class Payroll(db.Model):
     pay_date     = db.Column(db.String(20))
     recorded_by  = db.Column(db.String(100))
 
+class Inventory(db.Model):
+    __tablename__ = 'inventory'
+    id            = db.Column(db.Integer, primary_key=True)
+    name          = db.Column(db.String(100))
+    category      = db.Column(db.String(50), default='Other')
+    unit          = db.Column(db.String(20), default='pcs')
+    quantity      = db.Column(db.Integer, default=0)
+    unit_price    = db.Column(db.Float, default=0)
+    reorder_level = db.Column(db.Integer, default=10)
+
+class Transaction(db.Model):
+    __tablename__ = 'transactions'
+    id          = db.Column(db.Integer, primary_key=True)
+    date        = db.Column(db.String(20))
+    description = db.Column(db.String(200))
+    type        = db.Column(db.String(50))
+    amount      = db.Column(db.Float, default=0)
+    status      = db.Column(db.String(20))
+
+class Timetable(db.Model):
+    __tablename__ = 'timetable'
+    id         = db.Column(db.Integer,    primary_key=True)
+    program    = db.Column(db.String(100), nullable=False)
+    subject    = db.Column(db.String(100), nullable=False)
+    lecturer   = db.Column(db.String(100), nullable=False)
+    day        = db.Column(db.String(20),  nullable=False)
+    start_time = db.Column(db.String(10),  nullable=False)
+    end_time   = db.Column(db.String(10),  nullable=False)
+    room       = db.Column(db.String(50),  nullable=False)
+    year       = db.Column(db.String(20),  default='Year 1')
+    semester   = db.Column(db.String(20),  default='Semester 1')
+
+class Examination(db.Model):
+    __tablename__ = 'examinations'
+    id           = db.Column(db.Integer,    primary_key=True)
+    program      = db.Column(db.String(100), nullable=False)
+    subject      = db.Column(db.String(100), nullable=False)
+    exam_type    = db.Column(db.String(20),  nullable=False)
+    exam_date    = db.Column(db.String(20),  nullable=False)
+    start_time   = db.Column(db.String(10),  nullable=False)
+    end_time     = db.Column(db.String(10),  nullable=False)
+    venue        = db.Column(db.String(100), nullable=False)
+    year         = db.Column(db.String(20),  default='Year 1')
+    invigilator  = db.Column(db.String(100), nullable=True)
+    total_marks  = db.Column(db.Integer,     default=100)
+    semester     = db.Column(db.String(20),  default='Semester 1')
+    status       = db.Column(db.String(20),  default='Scheduled')
+
 
 # ═══════════════════════════════════════════
 # CREATE TABLES
@@ -132,6 +190,23 @@ class Payroll(db.Model):
 
 with app.app_context():
     db.create_all()
+    
+    # ADD NEW COLUMNS TO EXISTING STAFF TABLE
+    with db.engine.connect() as conn:
+        for col, coltype in [
+            ('full_name',      'VARCHAR(200)'),
+            ('department',     'VARCHAR(100)'),
+            ('job_title',      'VARCHAR(100)'),
+            ('phone',          'VARCHAR(20)'),
+            ('specialization', 'VARCHAR(200)'),
+            ('courses_taught', 'TEXT'),
+        ]:
+            try:
+                conn.execute(db.text(f'ALTER TABLE staff ADD COLUMN {col} {coltype}'))
+                conn.commit()
+                print(f'✅ Added column: {col}')
+            except Exception as e:
+                print(f'⏭️ Skipped {col}: already exists')
 
 
 # ═══════════════════════════════════════════
@@ -190,14 +265,14 @@ def admin_dashboard():
         flash('Access denied.')
         return redirect(url_for('staff_login'))
 
-    total_students      = Student.query.count()
-    staff_count         = Staff.query.count()
-    students_owing      = Student.query.filter(Student.balance > 0).count()
-    total_courses       = 0
-    total_announcements = 0
-    upcoming_exams      = 0
-    recent_students     = Student.query.order_by(Student.id.desc()).limit(5).all()
-    latest_announcements = []
+    total_students       = Student.query.count()
+    staff_count          = Staff.query.count()
+    students_owing       = Student.query.filter(Student.balance > 0).count()
+    total_courses        = Course.query.count()
+    total_announcements  = Announcement.query.count()
+    upcoming_exams       = Examination.query.filter_by(status='Scheduled').count()
+    recent_students      = Student.query.order_by(Student.id.desc()).limit(5).all()
+    latest_announcements = Announcement.query.order_by(Announcement.id.desc()).limit(3).all()
 
     return render_template('admin_dashboard.html',
                            total_students=total_students,
@@ -208,6 +283,7 @@ def admin_dashboard():
                            upcoming_exams=upcoming_exams,
                            recent_students=recent_students,
                            latest_announcements=latest_announcements)
+
 
 # ═══════════════════════════════════════════
 # STAFF MANAGEMENT
@@ -230,8 +306,18 @@ def add_staff():
     if existing:
         flash('A staff member with that ID or email already exists.', 'error')
         return redirect(url_for('manage_staff'))
-    db.session.add(Staff(staff_id=staff_id, email=email,
-        password=request.form.get('password'), role=request.form.get('role')))
+    db.session.add(Staff(
+        staff_id       = staff_id,
+        email          = email,
+        password       = request.form.get('password'),
+        role           = request.form.get('role'),
+        full_name      = request.form.get('full_name', ''),
+        department     = request.form.get('department', ''),
+        job_title      = request.form.get('job_title', ''),
+        phone          = request.form.get('phone', ''),
+        
+        courses_taught = request.form.get('courses_taught', '')
+    ))
     db.session.commit()
     flash(f'Staff member {staff_id} added successfully.', 'success')
     return redirect(url_for('manage_staff'))
@@ -304,421 +390,260 @@ def delete_student(student_id):
     return redirect(url_for('students'))
 
 
-# ═══════════════════════════════════════════
-# TUITION & PAYMENTS
-# ═══════════════════════════════════════════
-
-@app.route('/tuition-payments')
-def tuition_payments():
-    if session.get('role') not in ['admin', 'front_office', 'finance']:
+#ANNOUNCEMENT ROUTES
+@app.route('/announcements')
+def announcements():
+    if session.get('role') != 'admin':
         flash('Access denied.')
         return redirect(url_for('staff_login'))
-    all_students      = Student.query.order_by(Student.full_name).all()
-    payments          = Payment.query.order_by(Payment.id.desc()).all()
-    total_collected   = db.session.query(db.func.sum(Payment.amount)).scalar() or 0
-    total_outstanding = db.session.query(db.func.sum(Student.balance)).scalar() or 0
-    fully_paid        = Student.query.filter(Student.balance == 0).count()
-    with_balance      = Student.query.filter(Student.balance > 0).count()
-    return render_template('tuition_payments.html',
-        students=all_students, payments=payments,
-        total_collected=total_collected, total_outstanding=total_outstanding,
-        fully_paid=fully_paid, with_balance=with_balance,
-        today=date.today().isoformat(),
-    )
+    all_announcements = Announcement.query.order_by(Announcement.id.desc()).all()
+    return render_template('announcements.html', announcements=all_announcements)
 
-@app.route('/tuition-payments/record', methods=['POST'])
-def record_payment():
-    if session.get('role') not in ['admin', 'front_office', 'finance']:
-        return redirect(url_for('staff_login'))
-    student    = Student.query.get_or_404(request.form.get('student_id'))
-    amount     = float(request.form.get('amount') or 0)
-    pay_date   = request.form.get('date')
-    receipt_no = request.form.get('receipt_no')
-    method     = request.form.get('method')
-    db.session.add(Payment(
-        receipt_no=receipt_no, date=pay_date, student_id=student.id,
-        amount=amount, method=method,
-        notes=request.form.get('notes'), recorded_by=session.get('username'),
-    ))
-    student.amount_paid += amount
-    student.balance      = max(0, student.tuition_fee - student.amount_paid)
-    db.session.add(Transaction(
-        date=pay_date,
-        description=f"Tuition payment — {student.full_name} ({receipt_no})",
-        type='income', amount=amount, status='paid',
-    ))
-    account_map = {'Cash':'Cash','M-Pesa':'M-Pesa','Bank Transfer':'Bank','Cheque':'Bank','Card':'Bank'}
-    db.session.add(CashTransaction(
-        date=pay_date,
-        description=f"Tuition — {student.full_name} ({receipt_no})",
-        cb_type='deposit', account=account_map.get(method, 'Cash'),
-        amount=amount, recorded_by=session.get('username'),
-    ))
-    db.session.commit()
-    flash(f'Payment of KSh {amount:,.2f} recorded for {student.full_name}. Receipt: {receipt_no}', 'success')
-    return redirect(url_for('tuition_payments'))
-
-
-# ═══════════════════════════════════════════
-# ACCOUNTS RECEIVABLE
-# ═══════════════════════════════════════════
-
-@app.route('/accounts-receivable')
-def accounts_receivable():
-    if session.get('role') not in ['admin', 'finance']:
+@app.route('/announcements/add', methods=['POST'])
+def add_announcement():
+    if session.get('role') != 'admin':
         flash('Access denied.')
         return redirect(url_for('staff_login'))
-    all_students     = Student.query.order_by(Student.full_name).all()
-    payments         = Payment.query.order_by(Payment.id.desc()).all()
-    total_receivable = db.session.query(db.func.sum(Student.balance)).scalar() or 0
-    total_collected  = db.session.query(db.func.sum(Payment.amount)).scalar() or 0
-    current_count    = Student.query.filter(Student.balance > 0).count()
-    overdue_count    = Student.query.filter(Student.balance > 0, Student.intake_year < 2026).count()
-    return render_template('accounts_receivable.html',
-        students=all_students, payments=payments,
-        total_receivable=total_receivable, total_collected=total_collected,
-        current_count=current_count, overdue_count=overdue_count,
+    new_ann = Announcement(
+        title     = request.form['title'],
+        message   = request.form['message'],
+        audience  = request.form['audience'],
+        priority  = request.form['priority'],
+        date      = request.form['date'],
+        posted_by = request.form['posted_by']
     )
+    db.session.add(new_ann)
+    db.session.commit()
+    flash('Announcement posted successfully!', 'success')
+    return redirect(url_for('announcements'))
 
-
-# ═══════════════════════════════════════════
-# ACCOUNTS PAYABLE
-# ═══════════════════════════════════════════
-
-@app.route('/accounts-payable')
-def accounts_payable():
-    if session.get('role') not in ['admin', 'finance']:
+@app.route('/announcements/delete/<int:ann_id>', methods=['POST'])
+def delete_announcement(ann_id):
+    if session.get('role') != 'admin':
         flash('Access denied.')
         return redirect(url_for('staff_login'))
-    expenses      = Expense.query.order_by(Expense.id.desc()).all()
-    total_payable = db.session.query(db.func.sum(Expense.amount)).scalar() or 0
-    total_pending = db.session.query(db.func.sum(Expense.amount)).filter_by(status='pending').scalar() or 0
-    total_paid    = db.session.query(db.func.sum(Expense.amount)).filter_by(status='paid').scalar() or 0
-    overdue_count = Expense.query.filter(
-        Expense.status == 'pending',
-        Expense.due_date < date.today().isoformat()
-    ).count()
-    return render_template('accounts_payable.html',
-        expenses=expenses, total_payable=total_payable,
-        total_pending=total_pending, total_paid=total_paid,
-        overdue_count=overdue_count, today=date.today().isoformat(),
-    )
-
-@app.route('/accounts-payable/add', methods=['POST'])
-def add_expense():
-    if session.get('role') not in ['admin', 'finance']:
-        return redirect(url_for('staff_login'))
-    amount   = float(request.form.get('amount') or 0)
-    exp_date = request.form.get('date')
-    status   = request.form.get('status', 'pending')
-    db.session.add(Expense(
-        date=exp_date, vendor=request.form.get('vendor'),
-        category=request.form.get('category'),
-        description=request.form.get('description'),
-        amount=amount, due_date=request.form.get('due_date'),
-        status=status, recorded_by=session.get('username'),
-    ))
-    db.session.add(Transaction(
-        date=exp_date,
-        description=f"{request.form.get('category')} — {request.form.get('vendor')}",
-        type='expense', amount=amount, status=status,
-    ))
+    ann = Announcement.query.get_or_404(ann_id)
+    db.session.delete(ann)
     db.session.commit()
-    flash(f'Expense of KSh {amount:,.2f} added successfully.', 'success')
-    return redirect(url_for('accounts_payable'))
+    flash('Announcement deleted.', 'success')
+    return redirect(url_for('announcements'))
 
-@app.route('/accounts-payable/<int:expense_id>/pay', methods=['POST'])
-def mark_expense_paid(expense_id):
-    if session.get('role') not in ['admin', 'finance']:
-        return redirect(url_for('staff_login'))
-    expense = Expense.query.get_or_404(expense_id)
-    expense.status = 'paid'
-    db.session.add(CashTransaction(
-        date=date.today().isoformat(),
-        description=f"Payment — {expense.vendor}: {expense.description}",
-        cb_type='withdrawal', account='Bank',
-        amount=expense.amount, recorded_by=session.get('username'),
-    ))
-    db.session.commit()
-    flash('Expense marked as paid.', 'success')
-    return redirect(url_for('accounts_payable'))
+#courses routes
 
-@app.route('/accounts-payable/<int:expense_id>/delete', methods=['POST'])
-def delete_expense(expense_id):
-    if session.get('role') not in ['admin', 'finance']:
-        return redirect(url_for('staff_login'))
-    expense = Expense.query.get_or_404(expense_id)
-    db.session.delete(expense)
-    db.session.commit()
-    flash('Expense deleted.', 'success')
-    return redirect(url_for('accounts_payable'))
-
-
-# ═══════════════════════════════════════════
-# CASH & BANK
-# ═══════════════════════════════════════════
-
-@app.route('/cash-and-bank')
-def cash_and_bank():
-    if session.get('role') not in ['admin', 'finance']:
+@app.route('/courses')
+def courses():
+    if session.get('role') != 'admin':
         flash('Access denied.')
         return redirect(url_for('staff_login'))
-    cb_transactions = CashTransaction.query.order_by(CashTransaction.id.desc()).all()
-    def bal(account):
-        deps = db.session.query(db.func.sum(CashTransaction.amount)).filter_by(account=account, cb_type='deposit').scalar() or 0
-        wds  = db.session.query(db.func.sum(CashTransaction.amount)).filter_by(account=account, cb_type='withdrawal').scalar() or 0
-        return deps - wds
-    cash_balance      = bal('Cash')
-    bank_balance      = bal('Bank')
-    mpesa_balance     = bal('M-Pesa')
-    total_deposits    = db.session.query(db.func.sum(CashTransaction.amount)).filter_by(cb_type='deposit').scalar() or 0
-    total_withdrawals = db.session.query(db.func.sum(CashTransaction.amount)).filter_by(cb_type='withdrawal').scalar() or 0
-    transaction_count = CashTransaction.query.count()
-    return render_template('cash_and_bank.html',
-        cb_transactions=cb_transactions,
-        cash_balance=cash_balance, bank_balance=bank_balance, mpesa_balance=mpesa_balance,
-        total_deposits=total_deposits, total_withdrawals=total_withdrawals,
-        transaction_count=transaction_count, today=date.today().isoformat(),
-    )
+    all_courses = Course.query.order_by(Course.id.desc()).all()
+    return render_template('courses.html', courses=all_courses)
 
-@app.route('/cash-and-bank/add', methods=['POST'])
-def add_cash_transaction():
-    if session.get('role') not in ['admin', 'finance']:
-        return redirect(url_for('staff_login'))
-    amount = float(request.form.get('amount') or 0)
-    db.session.add(CashTransaction(
-        date=request.form.get('date'),
-        description=request.form.get('description'),
-        cb_type=request.form.get('cb_type'),
-        account=request.form.get('account'),
-        amount=amount,
-        reference=request.form.get('reference'),
-        recorded_by=session.get('username'),
-    ))
-    db.session.commit()
-    flash(f'Transaction of KSh {amount:,.2f} recorded successfully.', 'success')
-    return redirect(url_for('cash_and_bank'))
-
-
-# ═══════════════════════════════════════════
-# GRANTS & DONATIONS
-# ═══════════════════════════════════════════
-
-@app.route('/grants-donations')
-def grants_donations():
-    if session.get('role') not in ['admin', 'finance']:
+@app.route('/courses/add', methods=['POST'])
+def add_course():
+    if session.get('role') != 'admin':
         flash('Access denied.')
         return redirect(url_for('staff_login'))
-    grants          = Grant.query.order_by(Grant.id.desc()).all()
-    total_received  = db.session.query(db.func.sum(Grant.amount)).scalar() or 0
-    total_grants    = db.session.query(db.func.sum(Grant.amount)).filter_by(type='Grant').scalar() or 0
-    total_donations = db.session.query(db.func.sum(Grant.amount)).filter_by(type='Donation').scalar() or 0
-    total_count     = Grant.query.count()
-    return render_template('grants_donations.html',
-        grants=grants, total_received=total_received,
-        total_grants=total_grants, total_donations=total_donations,
-        total_count=total_count, today=date.today().isoformat(),
+    new_course = Course(
+        code        = request.form['code'],
+        name        = request.form['name'],
+        department  = request.form['department'],
+        duration    = request.form['duration'],
+        tuition_fee = float(request.form['tuition_fee']),
+        capacity    = int(request.form['capacity']),
+        intake_year = int(request.form['intake_year']),
+        description = request.form.get('description', ''),
+        status      = request.form['status']
     )
-
-@app.route('/grants-donations/add', methods=['POST'])
-def add_grant():
-    if session.get('role') not in ['admin', 'finance']:
-        return redirect(url_for('staff_login'))
-    amount = float(request.form.get('amount') or 0)
-    gdate  = request.form.get('date')
-    gtype  = request.form.get('type')
-    db.session.add(Grant(
-        date=gdate, source=request.form.get('source'),
-        type=gtype, description=request.form.get('description'),
-        amount=amount, reference=request.form.get('reference'),
-        recorded_by=session.get('username'),
-    ))
-    db.session.add(Transaction(
-        date=gdate,
-        description=f"{gtype} — {request.form.get('source')}",
-        type=gtype.lower(), amount=amount, status='paid',
-    ))
-    db.session.add(CashTransaction(
-        date=gdate,
-        description=f"{gtype} — {request.form.get('source')}",
-        cb_type='deposit', account='Bank',
-        amount=amount, recorded_by=session.get('username'),
-    ))
+    db.session.add(new_course)
     db.session.commit()
-    flash(f'{gtype} of KSh {amount:,.2f} recorded successfully.', 'success')
-    return redirect(url_for('grants_donations'))
+    flash('Course added successfully!', 'success')
+    return redirect(url_for('courses'))
 
-@app.route('/grants-donations/<int:grant_id>/delete', methods=['POST'])
-def delete_grant(grant_id):
-    if session.get('role') not in ['admin', 'finance']:
-        return redirect(url_for('staff_login'))
-    grant = Grant.query.get_or_404(grant_id)
-    db.session.delete(grant)
-    db.session.commit()
-    flash('Record deleted.', 'success')
-    return redirect(url_for('grants_donations'))
-
-
-
-# ═══════════════════════════════════════════
-# PAYROLL
-# ═══════════════════════════════════════════
-
-@app.route('/payroll')
-def payroll():
-    if session.get('role') not in ['admin', 'finance']:
+@app.route('/courses/delete/<int:course_id>', methods=['POST'])
+def delete_course(course_id):
+    if session.get('role') != 'admin':
         flash('Access denied.')
         return redirect(url_for('staff_login'))
-    payroll_records  = Payroll.query.order_by(Payroll.id.desc()).all()
-    total_gross      = db.session.query(db.func.sum(Payroll.gross_salary)).scalar() or 0
-    total_deductions = db.session.query(db.func.sum(Payroll.paye + Payroll.nhif + Payroll.nssf)).scalar() or 0
-    total_net        = db.session.query(db.func.sum(Payroll.net_pay)).scalar() or 0
-    staff_count      = db.session.query(Payroll.staff_id).distinct().count()
-    return render_template('payroll.html',
-        payroll_records=payroll_records,
-        total_gross=total_gross, total_deductions=total_deductions,
-        total_net=total_net, staff_count=staff_count,
-        today=date.today().isoformat(),
-    )
-
-@app.route('/payroll/add', methods=['POST'])
-def add_payroll():
-    if session.get('role') not in ['admin', 'finance']:
-        return redirect(url_for('staff_login'))
-    gross  = float(request.form.get('gross_salary') or 0)
-    net    = float(request.form.get('net_pay') or 0)
-    status = request.form.get('status', 'pending')
-    pdate  = request.form.get('pay_date')
-    period = request.form.get('period')
-    sname  = request.form.get('staff_name')
-    db.session.add(Payroll(
-        staff_id=request.form.get('staff_id'),
-        staff_name=sname, role=request.form.get('role'),
-        period=period, gross_salary=gross,
-        paye=float(request.form.get('paye') or 0),
-        nhif=float(request.form.get('nhif') or 0),
-        nssf=float(request.form.get('nssf') or 0),
-        net_pay=net, status=status,
-        pay_date=pdate, recorded_by=session.get('username'),
-    ))
-    db.session.add(Transaction(
-        date=pdate or date.today().isoformat(),
-        description=f"Salary — {sname} ({period})",
-        type='payroll', amount=gross, status=status,
-    ))
-    if status == 'paid':
-        db.session.add(CashTransaction(
-            date=pdate or date.today().isoformat(),
-            description=f"Salary payment — {sname} ({period})",
-            cb_type='withdrawal', account='Bank',
-            amount=net, recorded_by=session.get('username'),
-        ))
+    course = Course.query.get_or_404(course_id)
+    db.session.delete(course)
     db.session.commit()
-    flash(f'Payroll record for {sname} added. Net pay: KSh {net:,.2f}', 'success')
-    return redirect(url_for('payroll'))
+    flash('Course deleted.', 'success')
+    return redirect(url_for('courses'))
+#TIMETABLE ROUTES
 
-@app.route('/payroll/<int:payroll_id>/pay', methods=['POST'])
-def mark_payroll_paid(payroll_id):
-    if session.get('role') not in ['admin', 'finance']:
-        return redirect(url_for('staff_login'))
-    p = Payroll.query.get_or_404(payroll_id)
-    p.status = 'paid'
-    db.session.add(CashTransaction(
-        date=date.today().isoformat(),
-        description=f"Salary payment — {p.staff_name} ({p.period})",
-        cb_type='withdrawal', account='Bank',
-        amount=p.net_pay, recorded_by=session.get('username'),
-    ))
-    db.session.commit()
-    flash(f'Payroll for {p.staff_name} marked as paid.', 'success')
-    return redirect(url_for('payroll'))
-
-@app.route('/payroll/<int:payroll_id>/delete', methods=['POST'])
-def delete_payroll(payroll_id):
-    if session.get('role') not in ['admin', 'finance']:
-        return redirect(url_for('staff_login'))
-    p = Payroll.query.get_or_404(payroll_id)
-    db.session.delete(p)
-    db.session.commit()
-    flash('Payroll record deleted.', 'success')
-    return redirect(url_for('payroll'))
-
-
-# ═══════════════════════════════════════════
-# INVENTORY
-# ═══════════════════════════════════════════
-
-@app.route('/inventory')
-def inventory():
-    if session.get('role') not in ['admin', 'finance']:
+@app.route('/timetable')
+def timetable():
+    if session.get('role') != 'admin':
         flash('Access denied.')
         return redirect(url_for('staff_login'))
-    items          = Inventory.query.order_by(Inventory.name).all()
-    total_items    = Inventory.query.count()
-    total_value    = sum(i.quantity * i.unit_price for i in items)
-    low_stock_count= Inventory.query.filter(Inventory.quantity <= Inventory.reorder_level, Inventory.quantity > 0).count()
-    out_of_stock   = Inventory.query.filter(Inventory.quantity == 0).count()
-    return render_template('inventory.html',
-        items=items, total_items=total_items, total_value=total_value,
-        low_stock_count=low_stock_count, out_of_stock=out_of_stock,
+    all_schedules = Timetable.query.order_by(Timetable.day, Timetable.start_time).all()
+    all_courses   = Course.query.filter_by(status='Active').all()
+    return render_template('timetable.html',
+                           timetable=all_schedules,
+                           courses=all_courses)
+
+@app.route('/timetable/add', methods=['POST'])
+def add_timetable():
+    if session.get('role') != 'admin':
+        flash('Access denied.')
+        return redirect(url_for('staff_login'))
+    new_tt = Timetable(
+        program    = request.form['program'],
+        subject    = request.form['subject'],
+        lecturer   = request.form['lecturer'],
+        day        = request.form['day'],
+        start_time = request.form['start_time'],
+        end_time   = request.form['end_time'],
+        room       = request.form['room'],
+        year       = request.form['year'],
+        semester   = request.form['semester']
     )
-
-@app.route('/inventory/add', methods=['POST'])
-def add_inventory():
-    if session.get('role') not in ['admin', 'finance']:
-        return redirect(url_for('staff_login'))
-    db.session.add(Inventory(
-        name=request.form.get('name'),
-        category=request.form.get('category', 'Other'),
-        unit=request.form.get('unit', 'pcs'),
-        quantity=int(request.form.get('quantity') or 0),
-        unit_price=float(request.form.get('unit_price') or 0),
-        reorder_level=int(request.form.get('reorder_level') or 10),
-    ))
+    db.session.add(new_tt)
     db.session.commit()
-    flash(f'{request.form.get("name")} added to inventory.', 'success')
-    return redirect(url_for('inventory'))
+    flash('Schedule added successfully!', 'success')
+    return redirect(url_for('timetable'))
 
-@app.route('/inventory/restock', methods=['POST'])
-def restock_inventory():
-    if session.get('role') not in ['admin', 'finance']:
+@app.route('/timetable/delete/<int:tt_id>', methods=['POST'])
+def delete_timetable(tt_id):
+    if session.get('role') != 'admin':
+        flash('Access denied.')
         return redirect(url_for('staff_login'))
-    item = Inventory.query.get_or_404(request.form.get('item_id'))
-    add_qty = int(request.form.get('add_quantity') or 0)
-    item.quantity += add_qty
+    tt = Timetable.query.get_or_404(tt_id)
+    db.session.delete(tt)
     db.session.commit()
-    flash(f'{item.name} restocked by {add_qty}. New quantity: {item.quantity}.', 'success')
-    return redirect(url_for('inventory'))
+    flash('Schedule deleted.', 'success')
+    return redirect(url_for('timetable'))
 
-@app.route('/inventory/edit', methods=['POST'])
-def edit_inventory():
-    if session.get('role') not in ['admin', 'finance']:
+#EXAMINATIONS
+
+@app.route('/examinations')
+def examinations():
+    if session.get('role') != 'admin':
+        flash('Access denied.')
         return redirect(url_for('staff_login'))
-    item = Inventory.query.get_or_404(request.form.get('item_id'))
-    item.name          = request.form.get('name')
-    item.category      = request.form.get('category', 'Other')
-    item.unit          = request.form.get('unit', 'pcs')
-    item.quantity      = int(request.form.get('quantity') or 0)
-    item.unit_price    = float(request.form.get('unit_price') or 0)
-    item.reorder_level = int(request.form.get('reorder_level') or 10)
-    db.session.commit()
-    flash(f'{item.name} updated successfully.', 'success')
-    return redirect(url_for('inventory'))
+    all_exams   = Examination.query.order_by(Examination.exam_date).all()
+    all_courses = Course.query.filter_by(status='Active').all()
+    total_exams = Examination.query.count()
+    scheduled   = Examination.query.filter_by(status='Scheduled').count()
+    completed   = Examination.query.filter_by(status='Completed').count()
+    postponed   = Examination.query.filter_by(status='Postponed').count()
+    return render_template('examinations.html',
+                           exams=all_exams,
+                           courses=all_courses,
+                           total_exams=total_exams,
+                           scheduled=scheduled,
+                           completed=completed,
+                           postponed=postponed)
 
-@app.route('/inventory/<int:item_id>/delete', methods=['POST'])
-def delete_inventory(item_id):
-    if session.get('role') not in ['admin', 'finance']:
+@app.route('/examinations/add', methods=['POST'])
+def add_examination():
+    if session.get('role') != 'admin':
+        flash('Access denied.')
         return redirect(url_for('staff_login'))
-    item = Inventory.query.get_or_404(item_id)
-    db.session.delete(item)
+    new_exam = Examination(
+        program     = request.form['program'],
+        subject     = request.form['subject'],
+        exam_type   = request.form['exam_type'],
+        exam_date   = request.form['exam_date'],
+        start_time  = request.form['start_time'],
+        end_time    = request.form['end_time'],
+        venue       = request.form['venue'],
+        year        = request.form['year'],
+        invigilator = request.form.get('invigilator', ''),
+        total_marks = int(request.form.get('total_marks', 100)),
+        semester    = request.form['semester'],
+        status      = request.form['status']
+    )
+    db.session.add(new_exam)
     db.session.commit()
-    flash(f'{item.name} deleted from inventory.', 'success')
-    return redirect(url_for('inventory'))
+    flash('Exam scheduled successfully!', 'success')
+    return redirect(url_for('examinations'))
+
+@app.route('/examinations/delete/<int:exam_id>', methods=['POST'])
+def delete_examination(exam_id):
+    if session.get('role') != 'admin':
+        flash('Access denied.')
+        return redirect(url_for('staff_login'))
+    exam = Examination.query.get_or_404(exam_id)
+    db.session.delete(exam)
+    db.session.commit()
+    flash('Exam deleted.', 'success')
+    return redirect(url_for('examinations'))
+
+#FINANCE OVERVIEW ROUTES
+@app.route('/finance-overview')
+def finance_overview():
+    if session.get('role') != 'admin':
+        flash('Access denied.')
+        return redirect(url_for('staff_login'))
+
+    # Tuition — from finance system
+    from sqlalchemy import func
+    tuition_collected = db.session.query(func.sum(Payment.amount)).scalar() or 0
+    tuition_pending   = db.session.query(func.sum(Student.balance)).filter(Student.balance > 0).scalar() or 0
+    tuition_overdue   = 0
+    tuition_records   = Payment.query.count()
+
+    # Grants & Donations
+    grants_total    = db.session.query(func.sum(Grant.amount)).filter_by(type='Grant').scalar() or 0
+    donations_total = db.session.query(func.sum(Grant.amount)).filter_by(type='Donation').scalar() or 0
+
+    # Payroll
+    payroll_list    = Payroll.query.all()
+    payroll_staff   = Payroll.query.count()
+    payroll_total   = sum(p.gross_salary for p in payroll_list)
+    payroll_paid    = sum(p.net_pay for p in payroll_list if p.status == 'paid')
+    payroll_pending = sum(p.net_pay for p in payroll_list if p.status == 'pending')
+
+    # Cash & Bank
+    cash_deposits    = db.session.query(func.sum(CashTransaction.amount)).filter_by(cb_type='deposit').scalar() or 0
+    cash_withdrawals = db.session.query(func.sum(CashTransaction.amount)).filter_by(cb_type='withdrawal').scalar() or 0
+
+    # Payables
+    payable_paid    = db.session.query(func.sum(Expense.amount)).filter_by(status='paid').scalar() or 0
+    payable_pending = db.session.query(func.sum(Expense.amount)).filter_by(status='pending').scalar() or 0
+    payable_overdue = 0
+    payable_records = Expense.query.count()
+
+    # Inventory
+    inventory_list      = Inventory.query.all()
+    inventory_items     = Inventory.query.count()
+    inventory_value     = sum(i.quantity * i.unit_price for i in inventory_list)
+    inventory_low_stock = sum(1 for i in inventory_list if i.quantity <= i.reorder_level)
+
+    # Totals
+    total_income      = tuition_collected + grants_total + donations_total
+    total_expenses    = payable_paid + payroll_total
+    net_balance       = total_income - total_expenses
+    outstanding_fees  = tuition_pending
+
+    return render_template('finance_overview.html',
+                           total_income=total_income,
+                           total_expenses=total_expenses,
+                           net_balance=net_balance,
+                           outstanding_fees=outstanding_fees,
+                           tuition_collected=tuition_collected,
+                           tuition_pending=tuition_pending,
+                           tuition_overdue=tuition_overdue,
+                           tuition_records=tuition_records,
+                           grants_total=grants_total,
+                           donations_total=donations_total,
+                           payroll_staff=payroll_staff,
+                           payroll_total=payroll_total,
+                           payroll_paid=payroll_paid,
+                           payroll_pending=payroll_pending,
+                           cash_deposits=cash_deposits,
+                           cash_withdrawals=cash_withdrawals,
+                           payable_paid=payable_paid,
+                           payable_pending=payable_pending,
+                           payable_overdue=payable_overdue,
+                           payable_records=payable_records,
+                           inventory_items=inventory_items,
+                           inventory_value=inventory_value,
+                           inventory_low_stock=inventory_low_stock)
 
 
-# ═══════════════════════════════════════════
-# REPORTS
-# ═══════════════════════════════════════════
+#reports
 
 @app.route('/reports')
 def reports():
@@ -728,76 +653,78 @@ def reports():
 
     from sqlalchemy import func
 
-    # Income
+    # STUDENTS
+    total_students    = Student.query.count()
+    active_students   = Student.query.filter_by(status='Active').count()
+    deferred_students = Student.query.filter_by(status='Deferred').count()
+    graduated_students= Student.query.filter_by(status='Graduated').count()
+    suspended_students= Student.query.filter_by(status='Suspended').count()
+
+    # STUDENTS BY PROGRAM
+    programs = db.session.query(
+        Student.program,
+        func.count(Student.id)
+    ).group_by(Student.program).all()
+
+    # STAFF
+    total_staff    = Staff.query.count()
+    admin_count    = Staff.query.filter_by(role='admin').count()
+    finance_count  = Staff.query.filter_by(role='finance').count()
+    frontoffice_count = Staff.query.filter_by(role='front_office').count()
+
+    # COURSES
+    total_courses  = Course.query.count()
+    active_courses = Course.query.filter_by(status='Active').count()
+
+    # EXAMS
+    total_exams    = Examination.query.count()
+    scheduled_exams= Examination.query.filter_by(status='Scheduled').count()
+    completed_exams= Examination.query.filter_by(status='Completed').count()
+    postponed_exams= Examination.query.filter_by(status='Postponed').count()
+
+    # ANNOUNCEMENTS
+    total_announcements = Announcement.query.count()
+
+    # FINANCE OVERVIEW (simple)
     tuition_collected = db.session.query(func.sum(Payment.amount)).scalar() or 0
+    total_outstanding = db.session.query(func.sum(Student.balance)).filter(Student.balance > 0).scalar() or 0
     grants_total      = db.session.query(func.sum(Grant.amount)).filter_by(type='Grant').scalar() or 0
     donations_total   = db.session.query(func.sum(Grant.amount)).filter_by(type='Donation').scalar() or 0
-    other_income      = db.session.query(func.sum(Grant.amount)).filter(
-                            Grant.type.notin_(['Grant','Donation'])).scalar() or 0
-    total_income      = tuition_collected + grants_total + donations_total + other_income
+    total_income      = tuition_collected + grants_total + donations_total
+    total_expenses    = db.session.query(func.sum(Expense.amount)).scalar() or 0
+    net_balance       = total_income - total_expenses
 
-    # Expenses
-    utilities_total   = db.session.query(func.sum(Expense.amount)).filter_by(category='Utility').scalar() or 0
-    suppliers_total   = db.session.query(func.sum(Expense.amount)).filter_by(category='Supplier').scalar() or 0
-    rent_total        = db.session.query(func.sum(Expense.amount)).filter_by(category='Rent').scalar() or 0
-    other_expenses    = db.session.query(func.sum(Expense.amount)).filter_by(category='Other').scalar() or 0
-    expenses_only     = db.session.query(func.sum(Expense.amount)).scalar() or 0
-    payroll_total     = db.session.query(func.sum(Payroll.gross_salary)).scalar() or 0
-    total_expenses    = expenses_only + payroll_total
-    pending_expenses  = db.session.query(func.sum(Expense.amount)).filter_by(status='pending').scalar() or 0
-    paid_expenses     = db.session.query(func.sum(Expense.amount)).filter_by(status='paid').scalar() or 0
-    payroll_count     = Payroll.query.count()
-    pending_payroll   = Payroll.query.filter_by(status='pending').count()
-    pending_payroll_amount = db.session.query(func.sum(Payroll.net_pay)).filter_by(status='pending').scalar() or 0
-
-    # Net
-    net_surplus = total_income - total_expenses
-
-    # AR
-    total_ar     = db.session.query(func.sum(Student.balance)).scalar() or 0
-    fully_paid   = Student.query.filter(Student.balance == 0).count()
-    with_balance = Student.query.filter(Student.balance > 0).count()
-    total_students = Student.query.count()
-
-    # Cash & Bank balances
-    def bal(account):
-        deps = db.session.query(func.sum(CashTransaction.amount)).filter_by(account=account, cb_type='deposit').scalar() or 0
-        wds  = db.session.query(func.sum(CashTransaction.amount)).filter_by(account=account, cb_type='withdrawal').scalar() or 0
-        return deps - wds
-
-    cash_balance  = bal('Cash')
-    bank_balance  = bal('Bank')
-    mpesa_balance = bal('M-Pesa')
-
-    # Inventory value
-    inventory_items = Inventory.query.all()
-    inventory_value = sum(i.quantity * i.unit_price for i in inventory_items)
-
-    # Tables
-    income_transactions = Transaction.query.filter(
-        Transaction.type.in_(['income','grant','donation'])
-    ).order_by(Transaction.id.desc()).limit(20).all()
-    expense_list = Expense.query.order_by(Expense.id.desc()).all()
-    all_students = Student.query.order_by(Student.full_name).all()
+    # RECENT STUDENTS
+    recent_students = Student.query.order_by(Student.id.desc()).limit(10).all()
 
     return render_template('reports.html',
-        total_income=total_income, total_expenses=total_expenses,
-        net_surplus=net_surplus, total_ar=total_ar,
-        tuition_collected=tuition_collected, grants_total=grants_total,
-        donations_total=donations_total, other_income=other_income,
-        utilities_total=utilities_total, suppliers_total=suppliers_total,
-        rent_total=rent_total, other_expenses=other_expenses,
-        expenses_only=expenses_only, payroll_total=payroll_total,
-        pending_expenses=pending_expenses, paid_expenses=paid_expenses,
-        payroll_count=payroll_count, pending_payroll=pending_payroll,
-        pending_payroll_amount=pending_payroll_amount,
-        fully_paid=fully_paid, with_balance=with_balance,
         total_students=total_students,
-        cash_balance=cash_balance, bank_balance=bank_balance,
-        mpesa_balance=mpesa_balance, inventory_value=inventory_value,
-        income_transactions=income_transactions,
-        expense_list=expense_list, all_students=all_students,
-    )
+        active_students=active_students,
+        deferred_students=deferred_students,
+        graduated_students=graduated_students,
+        suspended_students=suspended_students,
+        programs=programs,
+        total_staff=total_staff,
+        admin_count=admin_count,
+        finance_count=finance_count,
+        frontoffice_count=frontoffice_count,
+        total_courses=total_courses,
+        active_courses=active_courses,
+        total_exams=total_exams,
+        scheduled_exams=scheduled_exams,
+        completed_exams=completed_exams,
+        postponed_exams=postponed_exams,
+        total_announcements=total_announcements,
+        tuition_collected=tuition_collected,
+        total_outstanding=total_outstanding,
+        total_income=total_income,
+        total_expenses=total_expenses,
+        net_balance=net_balance,
+        recent_students=recent_students)
+
+
+
+
 
 
 # ═══════════════════════════════════════════

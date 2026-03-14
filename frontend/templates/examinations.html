@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Examinations | Cleveland Medical College</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+    <style>
+        .btn-primary {
+            background:var(--navy); color:white; border:none;
+            padding:10px 20px; border-radius:8px;
+            font-family:'DM Sans',sans-serif; font-size:0.875rem;
+            font-weight:600; cursor:pointer; transition:background .18s;
+            display:inline-flex; align-items:center; gap:6px;
+        }
+        .btn-primary:hover { background:var(--navy-lt); }
+        .btn-danger {
+            background:#fee2e2; color:#991b1b; border:none;
+            padding:6px 14px; border-radius:6px; font-size:0.78rem;
+            cursor:pointer; font-family:'DM Sans',sans-serif; font-weight:600;
+        }
+        .exam-form {
+            display:grid; grid-template-columns:1fr 1fr 1fr;
+            gap:16px;
+        }
+        .exam-form .full { grid-column:1/-1; }
+        .form-field { display:flex; flex-direction:column; gap:5px; }
+        .form-field label {
+            font-size:0.75rem; font-weight:600; color:var(--muted);
+            text-transform:uppercase; letter-spacing:0.5px;
+        }
+        .form-field input,
+        .form-field select,
+        .form-field textarea {
+            padding:10px 12px; border:1px solid var(--border);
+            border-radius:7px; font-family:'DM Sans',sans-serif;
+            font-size:0.875rem; outline:none; width:100%;
+            transition:border .2s;
+        }
+        .form-field input:focus,
+        .form-field select:focus,
+        .form-field textarea:focus { border-color:var(--navy); }
+        .search-input {
+            padding:10px 16px; border:1px solid var(--border);
+            border-radius:8px; font-family:'DM Sans',sans-serif;
+            font-size:0.9rem; outline:none; width:220px;
+        }
+        .search-input:focus { border-color:var(--navy); }
+        .type-written   { background:#dbeafe; color:#1e40af; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .type-practical { background:#dcfce7; color:#166534; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .type-oral      { background:#f3e8ff; color:#6b21a8; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .status-scheduled  { background:#dbeafe; color:#1e40af; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .status-completed  { background:#dcfce7; color:#166534; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .status-cancelled  { background:#fee2e2; color:#991b1b; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .status-postponed  { background:#fef9c3; color:#854d0e; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .filter-tabs {
+            display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap;
+        }
+        .filter-tab {
+            padding:6px 14px; border-radius:20px;
+            font-size:0.8rem; font-weight:600;
+            cursor:pointer; border:1px solid var(--border);
+            background:white; color:var(--muted); transition:all .18s;
+        }
+        .filter-tab.active,
+        .filter-tab:hover { background:var(--navy); color:white; border-color:var(--navy); }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon">CMC</div>
+        <div><div class="brand-name">Cleveland</div><div class="brand-sub">Medical College</div></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="{{ url_for('admin_dashboard') }}" class="nav-item"><span class="nav-icon">⊞</span> Dashboard</a>
+        <a href="{{ url_for('manage_staff') }}" class="nav-item"><span class="nav-icon">👥</span> Staff Management</a>
+        <a href="{{ url_for('students') }}" class="nav-item"><span class="nav-icon">🎓</span> Students</a>
+
+        <div class="nav-section-label">Academic</div>
+        <a href="{{ url_for('courses') }}" class="nav-item"><span class="nav-icon">📚</span> Courses & Programs</a>
+        <a href="{{ url_for('timetable') }}" class="nav-item"><span class="nav-icon">📅</span> Timetable</a>
+        <a href="{{ url_for('examinations') }}" class="nav-item active"><span class="nav-icon">📝</span> Examinations</a>
+
+        <div class="nav-section-label">Communications</div>
+        <a href="{{ url_for('announcements') }}" class="nav-item"><span class="nav-icon">📢</span> Announcements</a>
+
+        <div class="nav-section-label">Finance</div>
+        <a href="{{ url_for('finance_overview') }}" class="nav-item"><span class="nav-icon">👁️</span> Finance Overview</a>
+
+        <div class="nav-section-label">Operations</div>
+        <a href="{{ url_for('reports') }}" class="nav-item"><span class="nav-icon">📊</span> Reports</a>
+        <a href="{{ url_for('settings') }}" class="nav-item"><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ session.get('username','AD')[0] }}</div>
+            <div>
+                <div class="user-name">{{ session.get('username','Administrator') }}</div>
+                <div class="user-role">{{ session.get('role','') | replace('_','  ') | title }}</div>
+            </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+</aside>
+
+<main class="main">
+
+    <header class="topbar">
+        <div>
+            <h1 class="page-title">Examinations</h1>
+            <p class="page-subtitle">Schedule and manage exams · Academic Year 2025/2026</p>
+        </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="flash-msg" style="{% if category=='success' %}background:#dcfce7;border-color:#86efac;color:#166534;{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div style="padding:0 32px 32px;">
+
+        <!-- STAT CARDS -->
+        <section class="cards-grid" style="margin-top:24px; margin-bottom:24px;">
+            <div class="card card--blue">
+                <div class="card-label">Total Exams</div>
+                <div class="card-value">{{ total_exams }}</div>
+                <div class="card-detail">All scheduled exams</div>
+                <div class="card-icon">📝</div>
+            </div>
+            <div class="card card--green">
+                <div class="card-label">Scheduled</div>
+                <div class="card-value">{{ scheduled }}</div>
+                <div class="card-detail">Upcoming exams</div>
+                <div class="card-icon">📅</div>
+            </div>
+            <div class="card card--orange">
+                <div class="card-label">Completed</div>
+                <div class="card-value">{{ completed }}</div>
+                <div class="card-detail">Done exams</div>
+                <div class="card-icon">✅</div>
+            </div>
+            <div class="card card--red">
+                <div class="card-label">Postponed</div>
+                <div class="card-value">{{ postponed }}</div>
+                <div class="card-detail">Rescheduled exams</div>
+                <div class="card-icon">⚠️</div>
+            </div>
+        </section>
+
+        <!-- ADD EXAM FORM -->
+        <div class="table-card" style="margin-bottom:24px;">
+            <div class="chart-title" style="margin-bottom:18px;">📝 Schedule New Exam</div>
+            <form method="POST" action="{{ url_for('add_examination') }}">
+                <div class="exam-form">
+                    <div class="form-field">
+                        <label>Program / Course</label>
+                        <select name="program" required>
+                            <option value="">Select...</option>
+                            {% for course in courses %}
+                            <option value="{{ course.name }}">{{ course.name }}</option>
+                            {% else %}
+                            <option value="Clinical Medicine">Clinical Medicine</option>
+                            <option value="Nursing">Nursing</option>
+                            <option value="Medical Laboratory">Medical Laboratory</option>
+                            <option value="Pharmacy">Pharmacy</option>
+                            <option value="Health Records">Health Records</option>
+                            <option value="Nutrition & Dietetics">Nutrition & Dietetics</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>Subject / Unit</label>
+                        <input type="text" name="subject"
+                               placeholder="e.g. Human Anatomy" required>
+                    </div>
+                    <div class="form-field">
+                        <label>Exam Type</label>
+                        <select name="exam_type" required>
+                            <option value="">Select...</option>
+                            <option value="Written">Written</option>
+                            <option value="Practical">Practical</option>
+                            <option value="Oral">Oral</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>Exam Date</label>
+                        <input type="date" name="exam_date" required>
+                    </div>
+                    <div class="form-field">
+                        <label>Start Time</label>
+                        <input type="time" name="start_time" required>
+                    </div>
+                    <div class="form-field">
+                        <label>End Time</label>
+                        <input type="time" name="end_time" required>
+                    </div>
+                    <div class="form-field">
+                        <label>Venue / Room</label>
+                        <input type="text" name="venue"
+                               placeholder="e.g. Exam Hall 1" required>
+                    </div>
+                    <div class="form-field">
+                        <label>Year of Study</label>
+                        <select name="year">
+                            <option value="Year 1">Year 1</option>
+                            <option value="Year 2">Year 2</option>
+                            <option value="Year 3">Year 3</option>
+                            <option value="Year 4">Year 4</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>Invigilator</label>
+                        <input type="text" name="invigilator"
+                               placeholder="e.g. Dr. Mwangi">
+                    </div>
+                    <div class="form-field">
+                        <label>Total Marks</label>
+                        <input type="number" name="total_marks"
+                               placeholder="e.g. 100" value="100">
+                    </div>
+                    <div class="form-field">
+                        <label>Semester</label>
+                        <select name="semester">
+                            <option value="Semester 1">Semester 1</option>
+                            <option value="Semester 2">Semester 2</option>
+                        </select>
+                    </div>
+                    <div class="form-field">
+                        <label>Status</label>
+                        <select name="status">
+                            <option value="Scheduled">Scheduled</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Postponed">Postponed</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="margin-top:14px;">
+                    <button type="submit" class="btn-primary">📝 Schedule Exam</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- FILTER TABS -->
+        <div class="filter-tabs">
+            <div class="filter-tab active" onclick="filterStatus('all', this)">All</div>
+            <div class="filter-tab" onclick="filterStatus('Scheduled', this)">Scheduled</div>
+            <div class="filter-tab" onclick="filterStatus('Completed', this)">Completed</div>
+            <div class="filter-tab" onclick="filterStatus('Postponed', this)">Postponed</div>
+            <div class="filter-tab" onclick="filterStatus('Cancelled', this)">Cancelled</div>
+        </div>
+
+        <!-- EXAMS TABLE -->
+        <div class="table-card">
+            <div class="table-header">
+                <div class="chart-title">Examination Schedule</div>
+                <input type="text" class="search-input"
+                       placeholder="🔍 Search exams..."
+                       onkeyup="searchTable(this)">
+            </div>
+            <table class="data-table" id="exam-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Program</th>
+                        <th>Subject</th>
+                        <th>Type</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Venue</th>
+                        <th>Year</th>
+                        <th>Invigilator</th>
+                        <th>Marks</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for exam in exams %}
+                    <tr data-status="{{ exam.status }}">
+                        <td>{{ loop.index }}</td>
+                        <td><strong>{{ exam.program }}</strong></td>
+                        <td>{{ exam.subject }}</td>
+                        <td>
+                            <span class="type-{{ exam.exam_type.lower() }}">
+                                {{ exam.exam_type }}
+                            </span>
+                        </td>
+                        <td>{{ exam.exam_date }}</td>
+                        <td>{{ exam.start_time }} – {{ exam.end_time }}</td>
+                        <td>{{ exam.venue }}</td>
+                        <td>{{ exam.year }}</td>
+                        <td>{{ exam.invigilator or '—' }}</td>
+                        <td>{{ exam.total_marks }}</td>
+                        <td>
+                            <span class="status-{{ exam.status.lower() }}">
+                                {{ exam.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <form method="POST"
+                                  action="{{ url_for('delete_examination', exam_id=exam.id) }}"
+                                  onsubmit="return confirm('Delete this exam?')">
+                                <button type="submit" class="btn-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="12" class="empty-state">
+                            No exams scheduled yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</main>
+
+<script>
+function filterStatus(status, el) {
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('#exam-table tbody tr').forEach(row => {
+        if (status === 'all') {
+            row.style.display = '';
+        } else {
+            row.style.display = row.dataset.status === status ? '' : 'none';
+        }
+    });
+}
+
+function searchTable(input) {
+    const q = input.value.toLowerCase();
+    document.querySelectorAll('#exam-table tbody tr').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+</script>
+
+</body>
+</html>

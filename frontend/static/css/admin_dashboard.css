@@ -422,6 +422,11 @@ body {
 }
 .q-btn:hover { background: var(--navy); color: white; border-color: var(--navy); }
 
+.status-badge {
+    display:inline-block; padding:3px 10px;
+    border-radius:20px; font-size:0.75rem; font-weight:600;
+}
+
 /* ── RESPONSIVE ── */
 @media (max-width: 1100px) {
     .cards-grid { grid-template-columns: repeat(2, 1fr); }
