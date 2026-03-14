@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Courses | Cleveland Medical College</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon">CMC</div>
+        <div><div class="brand-name">Cleveland</div><div class="brand-sub">Medical College</div></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="{{ url_for('front_office_dashboard') }}" class="nav-item">
+            <span class="nav-icon">⊞</span> Dashboard
+        </a>
+        <div class="nav-section-label">My Academic</div>
+        <a href="{{ url_for('staff_my_courses') }}" class="nav-item active">
+            <span class="nav-icon">📚</span> My Courses
+        </a>
+        <a href="{{ url_for('staff_timetable') }}" class="nav-item">
+            <span class="nav-icon">📅</span> My Timetable
+        </a>
+        <a href="{{ url_for('staff_exams') }}" class="nav-item">
+            <span class="nav-icon">📝</span> My Exams
+        </a>
+        <div class="nav-section-label">Communications</div>
+        <a href="{{ url_for('staff_announcements') }}" class="nav-item">
+            <span class="nav-icon">📢</span> Announcements
+        </a>
+        <a href="{{ url_for('staff_notices') }}" class="nav-item">
+            <span class="nav-icon">📣</span> Post Notice
+        </a>
+        <div class="nav-section-label">Account</div>
+        <a href="{{ url_for('staff_profile') }}" class="nav-item">
+            <span class="nav-icon">👤</span> My Profile
+        </a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ session.get('full_name', 'S')[0] }}</div>
+            <div>
+                <div class="user-name">{{ session.get('full_name', session.get('username')) }}</div>
+                <div class="user-role">{{ session.get('job_title', 'Staff') }}</div>
+            </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+</aside>
+
+<main class="main">
+    <header class="topbar">
+        <div>
+            <h1 class="page-title">My Courses</h1>
+            <p class="page-subtitle">Courses assigned to you · {{ session.get('department', 'CMC') }}</p>
+        </div>
+        <div class="date-badge" id="live-date"></div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for category, message in messages %}
+        <div class="flash-msg" style="{% if category=='success'%}background:#dcfce7;border-color:#86efac;color:#166534;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div style="padding:24px 32px;">
+
+        <!-- STAT CARDS -->
+        <section class="cards-grid" style="grid-template-columns:repeat(2,1fr);">
+            <div class="card card--blue">
+                <div class="card-label">Total Courses</div>
+                <div class="card-value">{{ my_courses | length }}</div>
+                <div class="card-detail">Assigned to you</div>
+                <div class="card-icon">📚</div>
+            </div>
+            <div class="card card--orange">
+                <div class="card-label">Department</div>
+                <div class="card-value" style="font-size:0.9rem;">{{ staff.department or '—' }}</div>
+                <div class="card-detail">Your department</div>
+                <div class="card-icon">🏫</div>
+            </div>
+        </section>
+
+        <!-- COURSES TABLE -->
+        <div class="table-card" style="margin-top:20px;">
+            <div class="table-header">
+                <div class="chart-title">📚 My Assigned Courses</div>
+                <input type="text" placeholder="🔍 Search..."
+                       onkeyup="filterTable(this)"
+                       style="padding:8px 14px; border:1px solid var(--border);
+                              border-radius:8px; font-family:inherit; font-size:0.875rem;
+                              outline:none; width:200px;">
+            </div>
+            <table class="data-table" id="courses-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Course Code</th>
+                        <th>Course Name</th>
+                        <th>Department</th>
+                        <th>Duration</th>
+                        <th>Capacity</th>
+                        <th>Intake Year</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for course in my_courses %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td><strong>{{ course.code }}</strong></td>
+                        <td>{{ course.name }}</td>
+                        <td>{{ course.department }}</td>
+                        <td>{{ course.duration }}</td>
+                        <td>{{ course.capacity }}</td>
+                        <td>{{ course.intake_year }}</td>
+                        <td>
+                            <span class="status status--{{ 'paid' if course.status == 'Active' else 'pending' }}">
+                                {{ course.status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            No courses assigned yet. Contact admin to assign courses.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- COURSE DESCRIPTION CARDS -->
+        {% if my_courses %}
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:20px;">
+            {% for course in my_courses %}
+            <div class="table-card" style="padding:20px;">
+                <div style="font-family:'Playfair Display',serif; font-size:1rem;
+                            color:var(--navy); margin-bottom:6px;">
+                    {{ course.name }}
+                </div>
+                <div style="font-size:0.78rem; color:var(--muted); margin-bottom:10px;">
+                    {{ course.code }} · {{ course.department }}
+                </div>
+                <p style="font-size:0.82rem; color:var(--text);">
+                    {{ course.description or 'No description provided.' }}
+                </p>
+                <div style="margin-top:12px; font-size:0.78rem; color:var(--muted);">
+                    Duration: <strong>{{ course.duration }}</strong> ·
+                    Capacity: <strong>{{ course.capacity }} students</strong>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+    </div>
+</main>
+
+<script>
+document.getElementById('live-date').textContent = new Date().toLocaleDateString('en-US', {
+    weekday:'long', year:'numeric', month:'long', day:'numeric'
+});
+function filterTable(input) {
+    const q = input.value.toLowerCase();
+    document.querySelectorAll('#courses-table tbody tr').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+</script>
+</body>
+</html>

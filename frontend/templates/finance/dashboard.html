@@ -59,12 +59,14 @@
 <div class="main">
 
   <!-- TOPBAR -->
-  <header class="topbar">
+     
+        <!-- TOPBAR -->
+<header class="topbar">
     <div>
         <h1>Finance Dashboard</h1>
         <p>Financial overview · Academic Year 2025/2026</p>
     </div>
-    <div style="display:flex; align-items:center; gap:12px;">
+    <div style="display:flex; align-items:center; gap:16px;">
         <div id="live-date" style="
             background:rgba(201,168,76,0.1); color:var(--gold);
             padding:6px 14px; border-radius:20px;
@@ -72,6 +74,32 @@
             border:1px solid var(--border);">
         </div>
         <span class="badge">FY 2025/26</span>
+        <a href="{{ url_for('messages') }}" style="text-decoration:none; text-align:center;">
+            <div style="position:relative; display:inline-block;">
+                <div style="width:52px; height:52px;
+                            background:rgba(201,168,76,0.15);
+                            border-radius:14px;
+                            display:flex; align-items:center; justify-content:center;
+                            font-size:26px; cursor:pointer;
+                            border:1px solid var(--border);
+                            box-shadow:0 4px 12px rgba(201,168,76,0.2);">
+                    💬
+                </div>
+                {% if unread_messages > 0 %}
+                <span style="position:absolute; top:-8px; right:-8px;
+                             background:#c94040; color:white;
+                             font-size:11px; font-weight:700;
+                             width:20px; height:20px; border-radius:50%;
+                             display:flex; align-items:center; justify-content:center;">
+                    {{ unread_messages }}
+                </span>
+                {% endif %}
+            </div>
+            <div style="font-size:11px; font-weight:600; color:var(--gold);
+                        margin-top:4px; letter-spacing:0.03em;">
+                Messages
+            </div>
+        </a>
     </div>
 </header>
 

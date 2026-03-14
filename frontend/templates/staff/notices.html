@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post Notice | Cleveland Medical College</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+    <style>
+        .type-class-postponement { background:#fee2e2; color:#991b1b; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .type-cat-notice         { background:#fef9c3; color:#854d0e; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .type-lab-session        { background:#dcfce7; color:#166534; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .type-general            { background:#dbeafe; color:#1e40af; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .type-assignment         { background:#f3e8ff; color:#6b21a8; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .notice-card {
+            background:white; border-radius:12px; padding:20px;
+            box-shadow:0 1px 4px rgba(0,0,0,0.06);
+            margin-bottom:14px;
+            border-left:4px solid var(--navy);
+        }
+        .btn-danger-sm {
+            background:#fee2e2; color:#991b1b; border:none;
+            padding:5px 12px; border-radius:6px; font-size:0.75rem;
+            cursor:pointer; font-family:inherit; font-weight:600;
+        }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon">CMC</div>
+        <div><div class="brand-name">Cleveland</div><div class="brand-sub">Medical College</div></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="{{ url_for('front_office_dashboard') }}" class="nav-item">
+            <span class="nav-icon">⊞</span> Dashboard
+        </a>
+        <div class="nav-section-label">My Academic</div>
+        <a href="{{ url_for('staff_my_courses') }}" class="nav-item">
+            <span class="nav-icon">📚</span> My Courses
+        </a>
+        <a href="{{ url_for('staff_timetable') }}" class="nav-item">
+            <span class="nav-icon">📅</span> My Timetable
+        </a>
+        <a href="{{ url_for('staff_exams') }}" class="nav-item">
+            <span class="nav-icon">📝</span> My Exams
+        </a>
+        <div class="nav-section-label">Communications</div>
+        <a href="{{ url_for('staff_announcements') }}" class="nav-item">
+            <span class="nav-icon">📢</span> Announcements
+        </a>
+        <a href="{{ url_for('staff_notices') }}" class="nav-item active">
+            <span class="nav-icon">📣</span> Post Notice
+        </a>
+        <div class="nav-section-label">Account</div>
+        <a href="{{ url_for('staff_profile') }}" class="nav-item">
+            <span class="nav-icon">👤</span> My Profile
+        </a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ session.get('full_name', 'S')[0] }}</div>
+            <div>
+                <div class="user-name">{{ session.get('full_name', session.get('username')) }}</div>
+                <div class="user-role">{{ session.get('job_title', 'Staff') }}</div>
+            </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+</aside>
+
+<main class="main">
+    <header class="topbar">
+        <div>
+            <h1 class="page-title">Post Notice</h1>
+            <p class="page-subtitle">Send notices to students · {{ session.get('department', 'CMC') }}</p>
+        </div>
+        <div class="date-badge" id="live-date"></div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for category, message in messages %}
+        <div class="flash-msg" style="{% if category=='success'%}background:#dcfce7;border-color:#86efac;color:#166534;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div style="padding:24px 32px;">
+
+        <div style="display:grid; grid-template-columns:1fr 1.6fr; gap:20px;">
+
+            <!-- POST NOTICE FORM -->
+            <div class="table-card">
+                <div class="chart-title" style="margin-bottom:6px;">📣 Post New Notice</div>
+                <div style="font-size:0.8rem; color:var(--muted); margin-bottom:18px;">
+                    Send a notice to your students
+                </div>
+
+                <form method="POST" action="{{ url_for('add_staff_notice') }}">
+                    <div class="form-field" style="margin-bottom:12px;">
+                        <label style="font-size:0.75rem; font-weight:600; color:var(--muted);
+                                      text-transform:uppercase; letter-spacing:0.5px;">
+                            Notice Type
+                        </label>
+                        <select name="notice_type" required
+                                style="width:100%; padding:10px 12px; border:1px solid var(--border);
+                                       border-radius:7px; font-family:inherit; font-size:0.875rem; outline:none;"
+                                onchange="updateTitle(this)">
+                            <option value="">Select type...</option>
+                            <option value="Class Postponement">⏸️ Class Postponement</option>
+                            <option value="CAT Notice">🐱 CAT Notice</option>
+                            <option value="Lab Session">🔬 Lab Session</option>
+                            <option value="Assignment">📋 Assignment</option>
+                            <option value="General">📌 General Notice</option>
+                        </select>
+                    </div>
+
+                    <div class="form-field" style="margin-bottom:12px;">
+                        <label style="font-size:0.75rem; font-weight:600; color:var(--muted);
+                                      text-transform:uppercase; letter-spacing:0.5px;">
+                            Title
+                        </label>
+                        <input type="text" name="title" id="notice-title"
+                               placeholder="e.g. Anatomy class postponed"
+                               required
+                               style="width:100%; padding:10px 12px; border:1px solid var(--border);
+                                      border-radius:7px; font-family:inherit; font-size:0.875rem; outline:none;">
+                    </div>
+
+                    <div class="form-field" style="margin-bottom:12px;">
+                        <label style="font-size:0.75rem; font-weight:600; color:var(--muted);
+                                      text-transform:uppercase; letter-spacing:0.5px;">
+                            Course / Subject
+                        </label>
+                        <select name="course"
+                                style="width:100%; padding:10px 12px; border:1px solid var(--border);
+                                       border-radius:7px; font-family:inherit; font-size:0.875rem; outline:none;">
+                            <option value="">Select course...</option>
+                            {% for course in staff.courses_taught.split(',') if staff.courses_taught %}
+                            <option value="{{ course.strip() }}">{{ course.strip() }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="form-field" style="margin-bottom:12px;">
+                        <label style="font-size:0.75rem; font-weight:600; color:var(--muted);
+                                      text-transform:uppercase; letter-spacing:0.5px;">
+                            Message
+                        </label>
+                        <textarea name="message" required rows="4"
+                                  placeholder="Write your notice here..."
+                                  style="width:100%; padding:10px 12px; border:1px solid var(--border);
+                                         border-radius:7px; font-family:inherit; font-size:0.875rem;
+                                         outline:none; resize:vertical;"></textarea>
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <div class="form-field">
+                            <label style="font-size:0.75rem; font-weight:600; color:var(--muted);
+                                          text-transform:uppercase; letter-spacing:0.5px;">
+                                Date
+                            </label>
+                            <input type="date" name="date" required
+                                   style="width:100%; padding:10px 12px; border:1px solid var(--border);
+                                          border-radius:7px; font-family:inherit; font-size:0.875rem; outline:none;">
+                        </div>
+                        <div class="form-field">
+                            <label style="font-size:0.75rem; font-weight:600; color:var(--muted);
+                                          text-transform:uppercase; letter-spacing:0.5px;">
+                                Audience
+                            </label>
+                            <select name="audience"
+                                    style="width:100%; padding:10px 12px; border:1px solid var(--border);
+                                           border-radius:7px; font-family:inherit; font-size:0.875rem; outline:none;">
+                                <option value="Students">Students</option>
+                                <option value="All">All Staff & Students</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary"
+                            style="width:100%; margin-top:16px; justify-content:center;">
+                        📣 Post Notice
+                    </button>
+                </form>
+            </div>
+
+            <!-- MY NOTICES LIST -->
+            <div>
+                <div class="chart-title" style="margin-bottom:16px;">
+                    📋 My Posted Notices
+                    <span style="font-size:0.8rem; color:var(--muted); font-weight:400; margin-left:8px;">
+                        ({{ notices | length }} total)
+                    </span>
+                </div>
+
+                {% for notice in notices %}
+                <div class="notice-card">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div style="flex:1;">
+                            <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+                                <strong style="font-size:0.9rem; color:var(--navy);">
+                                    {{ notice.title }}
+                                </strong>
+                                <span class="type-{{ notice.notice_type.lower().replace(' ','-') }}">
+                                    {{ notice.notice_type }}
+                                </span>
+                            </div>
+                            {% if notice.course %}
+                            <div style="font-size:0.78rem; color:var(--muted); margin-bottom:6px;">
+                                📚 {{ notice.course }}
+                            </div>
+                            {% endif %}
+                            <p style="font-size:0.85rem; color:var(--text); margin-bottom:10px; line-height:1.5;">
+                                {{ notice.message }}
+                            </p>
+                            <div style="display:flex; gap:14px; font-size:0.75rem; color:var(--muted);">
+                                <span>📅 {{ notice.date }}</span>
+                                <span>👥 {{ notice.audience }}</span>
+                            </div>
+                        </div>
+                        <form method="POST"
+                              action="{{ url_for('delete_staff_notice', notice_id=notice.id) }}"
+                              onsubmit="return confirm('Delete this notice?')"
+                              style="margin-left:12px;">
+                            <button type="submit" class="btn-danger-sm">Delete</button>
+                        </form>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-state" style="padding:40px; text-align:center;">
+                    No notices posted yet. Post your first notice!
+                </div>
+                {% endfor %}
+            </div>
+
+        </div>
+    </div>
+</main>
+
+<script>
+document.getElementById('live-date').textContent = new Date().toLocaleDateString('en-US', {
+    weekday:'long', year:'numeric', month:'long', day:'numeric'
+});
+
+// Auto fill title based on notice type
+function updateTitle(select) {
+    const titles = {
+        'Class Postponement': 'Class postponed — ',
+        'CAT Notice':         'CAT scheduled — ',
+        'Lab Session':        'Lab session — ',
+        'Assignment':         'New assignment — ',
+        'General':            ''
+    };
+    const titleInput = document.getElementById('notice-title');
+    if (!titleInput.value || Object.values(titles).some(t => titleInput.value.startsWith(t.trim()))) {
+        titleInput.value = titles[select.value] || '';
+    }
+}
+
+// Set today's date as default
+document.querySelector('input[name="date"]').value = new Date().toISOString().split('T')[0];
+</script>
+</body>
+</html>

@@ -14,6 +14,16 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
+@app.context_processor
+def inject_unread():
+    if session.get('username'):
+        unread = Message.query.filter_by(
+            receiver_id = session.get('username'),
+            is_read     = False
+        ).count()
+        return {'unread_messages': unread}
+    return {'unread_messages': 0}
+
 
 # ═══════════════════════════════════════════
 # MODELS
@@ -280,6 +290,29 @@ class Transaction(db.Model):
     amount      = db.Column(db.Float, default=0)
     status      = db.Column(db.String(20))
 
+class StaffNotice(db.Model):
+    __tablename__ = 'staff_notices'
+    id          = db.Column(db.Integer,     primary_key=True)
+    title       = db.Column(db.String(200), nullable=False)
+    message     = db.Column(db.Text,        nullable=False)
+    notice_type = db.Column(db.String(50),  nullable=False)
+    course      = db.Column(db.String(100), nullable=True)
+    posted_by   = db.Column(db.String(100), nullable=False)
+    date        = db.Column(db.String(20),  nullable=False)
+    audience    = db.Column(db.String(20),  default='Students')
+
+class Message(db.Model):
+    __tablename__ = 'messages'
+    id          = db.Column(db.Integer,     primary_key=True)
+    sender_id   = db.Column(db.String(100), nullable=False)
+    sender_name = db.Column(db.String(200), nullable=False)
+    receiver_id = db.Column(db.String(100), nullable=False)
+    subject     = db.Column(db.String(200), nullable=False)
+    body        = db.Column(db.Text,        nullable=False)
+    is_read     = db.Column(db.Boolean,     default=False)
+    date_sent   = db.Column(db.DateTime,    default=datetime.utcnow)
+    reply_to    = db.Column(db.Integer,     db.ForeignKey('messages.id'), nullable=True)
+
 
 # ═══════════════════════════════════════════
 # CREATE TABLES + MIGRATE
@@ -330,7 +363,9 @@ def staff_login():
             session['role']      = staff.role
             session['username']  = staff.staff_id
             session['email']     = staff.email
-            session['full_name'] = staff.full_name or staff.staff_id
+            session['full_name']  = staff.full_name  or staff.staff_id
+            session['job_title']  = staff.job_title  or 'Staff'
+            session['department'] = staff.department or 'CMC'
             if staff.role == 'admin':
                 return redirect(url_for('admin_dashboard'))
             elif staff.role == 'finance':
@@ -388,7 +423,10 @@ def manage_staff():
     if session.get('role') != 'admin':
         flash('Access denied.')
         return redirect(url_for('staff_login'))
-    return render_template('manage_staff.html', staff_list=Staff.query.order_by(Staff.id).all())
+    return render_template('manage_staff.html',
+                           staff_list=Staff.query.order_by(Staff.id).all(),
+                           all_courses=Course.query.filter_by(status='Active').order_by(Course.name).all())
+
 
 @app.route('/manage-staff/add', methods=['POST'])
 def add_staff():
@@ -409,8 +447,7 @@ def add_staff():
         department     = request.form.get('department', ''),
         job_title      = request.form.get('job_title', ''),
         phone          = request.form.get('phone', ''),
-        specialization = request.form.get('specialization', ''),
-        courses_taught = request.form.get('courses_taught', '')
+        courses_taught = ', '.join(request.form.getlist('courses_taught'))
     ))
     db.session.commit()
     flash(f'Staff member {staff_id} added successfully.', 'success')
@@ -1261,12 +1298,230 @@ def finance_reports():
 # FRONT OFFICE / STAFF DASHBOARD
 # ═══════════════════════════════════════════
 
+import calendar as cal
+
+def get_staff():
+    return Staff.query.filter_by(staff_id=session.get('username')).first()
+
 @app.route('/front-office-dashboard')
 def front_office_dashboard():
     if session.get('role') != 'front_office':
         flash('Access denied.')
         return redirect(url_for('staff_login'))
-    return render_template('staff_dashboard.html')
+    staff        = get_staff()
+    course_names = [c.strip() for c in (staff.courses_taught or '').split(',') if c.strip()]
+    my_courses   = Course.query.filter(Course.name.in_(course_names)).all() if course_names else []
+    today_name   = cal.day_name[date.today().weekday()]
+    today_classes= Timetable.query.filter_by(
+        lecturer = staff.full_name or staff.staff_id,
+        day      = today_name
+    ).all()
+    my_exams = Examination.query.filter_by(
+        invigilator = staff.full_name or staff.staff_id,
+        status      = 'Scheduled'
+    ).all()
+    announcements = Announcement.query.filter(
+        Announcement.audience.in_(['All', 'Staff'])
+    ).order_by(Announcement.id.desc()).limit(5).all()
+    return render_template('staff/dashboard.html',
+                           staff=staff,
+                           my_courses=my_courses,
+                           today_classes=today_classes,
+                           my_exams=my_exams,
+                           announcements=announcements)
+
+@app.route('/staff/my-courses')
+def staff_my_courses():
+    if session.get('role') != 'front_office':
+        flash('Access denied.')
+        return redirect(url_for('staff_login'))
+    staff        = get_staff()
+    course_names = [c.strip() for c in (staff.courses_taught or '').split(',') if c.strip()]
+    my_courses   = Course.query.filter(Course.name.in_(course_names)).all() if course_names else []
+    return render_template('staff/courses.html', my_courses=my_courses, staff=staff)
+
+@app.route('/staff/timetable')
+def staff_timetable():
+    if session.get('role') != 'front_office':
+        flash('Access denied.')
+        return redirect(url_for('staff_login'))
+    staff     = get_staff()
+    timetable = Timetable.query.filter_by(
+        lecturer = staff.full_name or staff.staff_id
+    ).order_by(Timetable.day, Timetable.start_time).all()
+    return render_template('staff/timetable.html', timetable=timetable, staff=staff)
+
+@app.route('/staff/exams')
+def staff_exams():
+    if session.get('role') != 'front_office':
+        flash('Access denied.')
+        return redirect(url_for('staff_login'))
+    staff    = get_staff()
+    my_exams = Examination.query.filter_by(
+        invigilator = staff.full_name or staff.staff_id
+    ).order_by(Examination.exam_date).all()
+    return render_template('staff/exams.html', my_exams=my_exams, staff=staff)
+
+@app.route('/staff/announcements')
+def staff_announcements():
+    if session.get('role') != 'front_office':
+        flash('Access denied.')
+        return redirect(url_for('staff_login'))
+    announcements = Announcement.query.filter(
+        Announcement.audience.in_(['All', 'Staff'])
+    ).order_by(Announcement.id.desc()).all()
+    return render_template('staff/announcements.html', announcements=announcements)
+
+@app.route('/staff/notices')
+def staff_notices():
+    if session.get('role') != 'front_office':
+        flash('Access denied.')
+        return redirect(url_for('staff_login'))
+    staff   = get_staff()
+    notices = StaffNotice.query.filter_by(
+        posted_by = staff.staff_id
+    ).order_by(StaffNotice.id.desc()).all()
+    return render_template('staff/notices.html', notices=notices, staff=staff)
+
+@app.route('/staff/notices/add', methods=['POST'])
+def add_staff_notice():
+    if session.get('role') != 'front_office':
+        flash('Access denied.')
+        return redirect(url_for('staff_login'))
+    staff = get_staff()
+    db.session.add(StaffNotice(
+        title       = request.form['title'],
+        message     = request.form['message'],
+        notice_type = request.form['notice_type'],
+        course      = request.form.get('course', ''),
+        posted_by   = staff.staff_id,
+        date        = request.form['date'],
+        audience    = request.form.get('audience', 'Students')
+    ))
+    db.session.commit()
+    flash('Notice posted successfully!', 'success')
+    return redirect(url_for('staff_notices'))
+
+@app.route('/staff/notices/delete/<int:notice_id>', methods=['POST'])
+def delete_staff_notice(notice_id):
+    if session.get('role') != 'front_office':
+        flash('Access denied.')
+        return redirect(url_for('staff_login'))
+    notice = StaffNotice.query.get_or_404(notice_id)
+    db.session.delete(notice)
+    db.session.commit()
+    flash('Notice deleted.', 'success')
+    return redirect(url_for('staff_notices'))
+
+@app.route('/staff/profile')
+def staff_profile():
+    if session.get('role') != 'front_office':
+        flash('Access denied.')
+        return redirect(url_for('staff_login'))
+    staff = get_staff()
+    return render_template('staff/profile.html', staff=staff)
+
+@app.route('/staff/profile/update', methods=['POST'])
+def update_staff_profile():
+    if session.get('role') != 'front_office':
+        flash('Access denied.')
+        return redirect(url_for('staff_login'))
+    staff = get_staff()
+    if staff:
+        staff.full_name = request.form.get('full_name', '')
+        staff.phone     = request.form.get('phone', '')
+        new_email       = request.form.get('email', '')
+        existing = Staff.query.filter(
+            Staff.email == new_email,
+            Staff.id != staff.id
+        ).first()
+        if existing:
+            flash('That email is already in use.', 'error')
+        else:
+            staff.email = new_email
+            session['full_name'] = staff.full_name or staff.staff_id
+            db.session.commit()
+            flash('Profile updated successfully!', 'success')
+    return redirect(url_for('staff_profile'))
+
+# ═══════════════════════════════════════════
+# MESSAGES
+# ═══════════════════════════════════════════
+
+@app.route('/messages')
+def messages():
+    if not session.get('username'):
+        return redirect(url_for('staff_login'))
+    username    = session.get('username')
+    role        = session.get('role')
+    inbox       = Message.query.filter_by(receiver_id=username).order_by(Message.date_sent.desc()).all()
+    sent        = Message.query.filter_by(sender_id=username).order_by(Message.date_sent.desc()).all()
+    unread      = Message.query.filter_by(receiver_id=username, is_read=False).count()
+    auto_to     = request.args.get('to', '')
+
+    if role == 'admin':
+        contacts = Staff.query.filter(
+            Staff.role.in_(['finance', 'front_office']),
+            Staff.staff_id != username
+        ).all()
+    elif role == 'finance':
+        contacts = Staff.query.filter_by(role='admin').all()
+    elif role == 'front_office':
+        contacts = Staff.query.filter_by(role='admin').all()
+    else:
+        contacts = []
+
+    # If coming from finance overview auto select finance contact
+    auto_contact = None
+    if auto_to == 'finance':
+        auto_contact = Staff.query.filter_by(role='finance').first()
+
+    return render_template('messages.html',
+                           inbox=inbox,
+                           sent=sent,
+                           unread=unread,
+                           contacts=contacts,
+                           auto_contact=auto_contact)
+
+@app.route('/messages/send', methods=['POST'])
+def send_message():
+    if not session.get('username'):
+        return redirect(url_for('staff_login'))
+    sender   = get_staff() or Staff.query.filter_by(staff_id=session.get('username')).first()
+    receiver_id = request.form.get('receiver_id')
+    receiver    = Staff.query.filter_by(staff_id=receiver_id).first()
+    db.session.add(Message(
+        sender_id   = session.get('username'),
+        sender_name = session.get('full_name') or session.get('username'),
+        receiver_id = receiver_id,
+        subject     = request.form.get('subject'),
+        body        = request.form.get('body'),
+        reply_to    = request.form.get('reply_to') or None
+    ))
+    db.session.commit()
+    flash('Message sent successfully!', 'success')
+    return redirect(url_for('messages'))
+
+@app.route('/messages/read/<int:msg_id>')
+def read_message(msg_id):
+    if not session.get('username'):
+        return redirect(url_for('staff_login'))
+    msg = Message.query.get_or_404(msg_id)
+    if msg.receiver_id == session.get('username'):
+        msg.is_read = True
+        db.session.commit()
+    return redirect(url_for('messages'))
+
+@app.route('/messages/delete/<int:msg_id>', methods=['POST'])
+def delete_message(msg_id):
+    if not session.get('username'):
+        return redirect(url_for('staff_login'))
+    msg = Message.query.get_or_404(msg_id)
+    if msg.sender_id == session.get('username') or msg.receiver_id == session.get('username'):
+        db.session.delete(msg)
+        db.session.commit()
+        flash('Message deleted.', 'success')
+    return redirect(url_for('messages'))
 
 
 # ═══════════════════════════════════════════

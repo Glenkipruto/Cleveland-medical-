@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Exams | Cleveland Medical College</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+    <style>
+        .type-written   { background:#dbeafe; color:#1e40af; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .type-practical { background:#dcfce7; color:#166534; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .type-oral      { background:#f3e8ff; color:#6b21a8; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .status-scheduled  { background:#dbeafe; color:#1e40af; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .status-completed  { background:#dcfce7; color:#166534; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .status-postponed  { background:#fef9c3; color:#854d0e; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .status-cancelled  { background:#fee2e2; color:#991b1b; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .filter-tabs { display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap; }
+        .filter-tab {
+            padding:6px 14px; border-radius:20px; font-size:0.8rem; font-weight:600;
+            cursor:pointer; border:1px solid var(--border);
+            background:white; color:var(--muted); transition:all .18s;
+        }
+        .filter-tab.active,
+        .filter-tab:hover { background:var(--navy); color:white; border-color:var(--navy); }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon">CMC</div>
+        <div><div class="brand-name">Cleveland</div><div class="brand-sub">Medical College</div></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="{{ url_for('front_office_dashboard') }}" class="nav-item">
+            <span class="nav-icon">⊞</span> Dashboard
+        </a>
+        <div class="nav-section-label">My Academic</div>
+        <a href="{{ url_for('staff_my_courses') }}" class="nav-item">
+            <span class="nav-icon">📚</span> My Courses
+        </a>
+        <a href="{{ url_for('staff_timetable') }}" class="nav-item">
+            <span class="nav-icon">📅</span> My Timetable
+        </a>
+        <a href="{{ url_for('staff_exams') }}" class="nav-item active">
+            <span class="nav-icon">📝</span> My Exams
+        </a>
+        <div class="nav-section-label">Communications</div>
+        <a href="{{ url_for('staff_announcements') }}" class="nav-item">
+            <span class="nav-icon">📢</span> Announcements
+        </a>
+        <a href="{{ url_for('staff_notices') }}" class="nav-item">
+            <span class="nav-icon">📣</span> Post Notice
+        </a>
+        <div class="nav-section-label">Account</div>
+        <a href="{{ url_for('staff_profile') }}" class="nav-item">
+            <span class="nav-icon">👤</span> My Profile
+        </a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ session.get('full_name', 'S')[0] }}</div>
+            <div>
+                <div class="user-name">{{ session.get('full_name', session.get('username')) }}</div>
+                <div class="user-role">{{ session.get('job_title', 'Staff') }}</div>
+            </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+</aside>
+
+<main class="main">
+    <header class="topbar">
+        <div>
+            <h1 class="page-title">My Exams</h1>
+            <p class="page-subtitle">Exams you are invigilating · {{ session.get('department', 'CMC') }}</p>
+        </div>
+        <div class="date-badge" id="live-date"></div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for category, message in messages %}
+        <div class="flash-msg" style="{% if category=='success'%}background:#dcfce7;border-color:#86efac;color:#166534;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div style="padding:24px 32px;">
+
+        <!-- STAT CARDS -->
+        <section class="cards-grid">
+            <div class="card card--blue">
+                <div class="card-label">Total Exams</div>
+                <div class="card-value">{{ my_exams | length }}</div>
+                <div class="card-detail">All assigned exams</div>
+                <div class="card-icon">📝</div>
+            </div>
+            <div class="card card--green">
+                <div class="card-label">Scheduled</div>
+                <div class="card-value">{{ my_exams | selectattr('status', 'equalto', 'Scheduled') | list | length }}</div>
+                <div class="card-detail">Upcoming exams</div>
+                <div class="card-icon">📅</div>
+            </div>
+            <div class="card card--orange">
+                <div class="card-label">Completed</div>
+                <div class="card-value">{{ my_exams | selectattr('status', 'equalto', 'Completed') | list | length }}</div>
+                <div class="card-detail">Done exams</div>
+                <div class="card-icon">✅</div>
+            </div>
+            <div class="card card--red">
+                <div class="card-label">Postponed</div>
+                <div class="card-value">{{ my_exams | selectattr('status', 'equalto', 'Postponed') | list | length }}</div>
+                <div class="card-detail">Rescheduled</div>
+                <div class="card-icon">⚠️</div>
+            </div>
+        </section>
+
+        <!-- FILTER TABS -->
+        <div class="filter-tabs" style="margin-top:20px;">
+            <div class="filter-tab active" onclick="filterStatus('all', this)">All</div>
+            <div class="filter-tab" onclick="filterStatus('Scheduled', this)">Scheduled</div>
+            <div class="filter-tab" onclick="filterStatus('Completed', this)">Completed</div>
+            <div class="filter-tab" onclick="filterStatus('Postponed', this)">Postponed</div>
+            <div class="filter-tab" onclick="filterStatus('Cancelled', this)">Cancelled</div>
+        </div>
+
+        <!-- EXAMS TABLE -->
+        <div class="table-card">
+            <div class="table-header">
+                <div class="chart-title">📝 My Examination Schedule</div>
+                <input type="text" placeholder="🔍 Search..."
+                       onkeyup="searchTable(this)"
+                       style="padding:8px 14px; border:1px solid var(--border);
+                              border-radius:8px; font-family:inherit;
+                              font-size:0.875rem; outline:none; width:200px;">
+            </div>
+            <table class="data-table" id="exam-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Subject</th>
+                        <th>Program</th>
+                        <th>Type</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Venue</th>
+                        <th>Year</th>
+                        <th>Marks</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for exam in my_exams %}
+                    <tr data-status="{{ exam.status }}">
+                        <td>{{ loop.index }}</td>
+                        <td><strong>{{ exam.subject }}</strong></td>
+                        <td>{{ exam.program }}</td>
+                        <td>
+                            <span class="type-{{ exam.exam_type.lower() }}">
+                                {{ exam.exam_type }}
+                            </span>
+                        </td>
+                        <td>{{ exam.exam_date }}</td>
+                        <td>{{ exam.start_time }} – {{ exam.end_time }}</td>
+                        <td>{{ exam.venue }}</td>
+                        <td>{{ exam.year }}</td>
+                        <td>{{ exam.total_marks }}</td>
+                        <td>
+                            <span class="status-{{ exam.status.lower() }}">
+                                {{ exam.status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="empty-state">
+                            No exams assigned yet. Contact admin to assign you as invigilator.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</main>
+
+<script>
+document.getElementById('live-date').textContent = new Date().toLocaleDateString('en-US', {
+    weekday:'long', year:'numeric', month:'long', day:'numeric'
+});
+
+function filterStatus(status, el) {
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('#exam-table tbody tr').forEach(row => {
+        if (status === 'all') {
+            row.style.display = '';
+        } else {
+            row.style.display = row.dataset.status === status ? '' : 'none';
+        }
+    });
+}
+
+function searchTable(input) {
+    const q = input.value.toLowerCase();
+    document.querySelectorAll('#exam-table tbody tr').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+</script>
+</body>
+</html>

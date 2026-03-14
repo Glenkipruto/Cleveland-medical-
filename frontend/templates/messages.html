@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages | Cleveland Medical College</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+    <style>
+        .msg-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+            height: calc(100vh - 80px);
+        }
+        .msg-sidebar {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .msg-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+        }
+        .msg-tab {
+            flex: 1; padding: 12px;
+            text-align: center; font-size: 0.85rem;
+            font-weight: 600; cursor: pointer;
+            color: var(--muted); border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        .msg-tab.active { color: var(--navy); border-bottom-color: var(--navy); }
+        .msg-list { flex: 1; overflow-y: auto; }
+        .msg-item {
+            padding: 14px 16px;
+            border-bottom: 1px solid #f1f5f9;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .msg-item:hover { background: #f8fafc; }
+        .msg-item.active { background: #eff6ff; }
+        .msg-item.unread { border-left: 3px solid var(--navy); }
+        .msg-item-header {
+            display: flex; justify-content: space-between;
+            margin-bottom: 4px;
+        }
+        .msg-item-from { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+        .msg-item-date { font-size: 0.72rem; color: var(--muted); }
+        .msg-item-subject { font-size: 0.8rem; color: var(--text); margin-bottom: 3px; }
+        .msg-item-preview { font-size: 0.75rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .msg-main {
+            background: white; border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+        .msg-view {
+            flex: 1; padding: 28px;
+            overflow-y: auto; display: none;
+        }
+        .msg-view.active { display: block; }
+        .compose-panel {
+            padding: 24px; display: none;
+            overflow-y: auto;
+        }
+        .compose-panel.active { display: block; }
+        .welcome-panel {
+            flex: 1; display: flex;
+            align-items: center; justify-content: center;
+            flex-direction: column; color: var(--muted);
+        }
+        .form-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+        .form-field label { font-size: 0.75rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-field input, .form-field select, .form-field textarea {
+            padding: 10px 12px; border: 1px solid var(--border);
+            border-radius: 7px; font-family: inherit; font-size: 0.875rem; outline: none; width: 100%;
+        }
+        .form-field input:focus, .form-field select:focus, .form-field textarea:focus { border-color: var(--navy); }
+        .form-field textarea { resize: vertical; min-height: 120px; }
+        .unread-dot {
+            width: 8px; height: 8px;
+            background: var(--navy); border-radius: 50%;
+            display: inline-block; margin-left: 6px;
+        }
+        .btn-reply {
+            background: var(--navy); color: white; border: none;
+            padding: 8px 18px; border-radius: 8px; font-family: inherit;
+            font-size: 0.875rem; font-weight: 600; cursor: pointer;
+            margin-top: 16px;
+        }
+        .reply-box {
+            border-top: 1px solid var(--border);
+            padding: 20px; margin-top: 20px; display: none;
+        }
+        .reply-box.open { display: block; }
+        .btn-outline {
+            background: white; color: var(--navy);
+            border: 1.5px solid var(--navy);
+            padding: 9px 18px; border-radius: 8px;
+            font-family: inherit; font-size: 0.875rem;
+            font-weight: 600; cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon">CMC</div>
+        <div><div class="brand-name">Cleveland</div><div class="brand-sub">Medical College</div></div>
+    </div>
+    <nav class="sidebar-nav">
+
+        {% if session.get('role') == 'admin' %}
+        <div class="nav-section-label">Main</div>
+        <a href="{{ url_for('admin_dashboard') }}" class="nav-item"><span class="nav-icon">⊞</span> Dashboard</a>
+        <a href="{{ url_for('manage_staff') }}" class="nav-item"><span class="nav-icon">👥</span> Staff Management</a>
+        <a href="{{ url_for('students') }}" class="nav-item"><span class="nav-icon">🎓</span> Students</a>
+        <div class="nav-section-label">Academic</div>
+        <a href="{{ url_for('courses') }}" class="nav-item"><span class="nav-icon">📚</span> Courses & Programs</a>
+        <a href="{{ url_for('timetable') }}" class="nav-item"><span class="nav-icon">📅</span> Timetable</a>
+        <a href="{{ url_for('examinations') }}" class="nav-item"><span class="nav-icon">📝</span> Examinations</a>
+        <div class="nav-section-label">Communications</div>
+        <a href="{{ url_for('announcements') }}" class="nav-item"><span class="nav-icon">📢</span> Announcements</a>
+        <div class="nav-section-label">Finance</div>
+        <a href="{{ url_for('finance_overview') }}" class="nav-item"><span class="nav-icon">👁️</span> Finance Overview</a>
+        <div class="nav-section-label">Operations</div>
+        <a href="{{ url_for('reports') }}" class="nav-item"><span class="nav-icon">📊</span> Reports</a>
+        <a href="{{ url_for('settings') }}" class="nav-item"><span class="nav-icon">⚙️</span> Settings</a>
+
+        {% elif session.get('role') == 'finance' %}
+        <div class="nav-section-label">Main</div>
+        <a href="{{ url_for('finance_dashboard') }}" class="nav-item"><span class="nav-icon">📊</span> Dashboard</a>
+        <div class="nav-section-label">Finance</div>
+        <a href="{{ url_for('tuition') }}" class="nav-item"><span class="nav-icon">💰</span> Tuition & Payments</a>
+        <a href="{{ url_for('accounts_receivable') }}" class="nav-item"><span class="nav-icon">📥</span> Accounts Receivable</a>
+        <a href="{{ url_for('accounts_payable') }}" class="nav-item"><span class="nav-icon">📤</span> Accounts Payable</a>
+        <a href="{{ url_for('cash_bank') }}" class="nav-item"><span class="nav-icon">🏦</span> Cash & Bank</a>
+        <a href="{{ url_for('grants_donations') }}" class="nav-item"><span class="nav-icon">🎁</span> Grants & Donations</a>
+        <a href="{{ url_for('payroll') }}" class="nav-item"><span class="nav-icon">👥</span> Payroll</a>
+        <div class="nav-section-label">Operations</div>
+        <a href="{{ url_for('inventory') }}" class="nav-item"><span class="nav-icon">📦</span> Inventory</a>
+        <a href="{{ url_for('finance_reports') }}" class="nav-item"><span class="nav-icon">📈</span> Reports</a>
+
+        {% elif session.get('role') == 'front_office' %}
+        <div class="nav-section-label">Main</div>
+        <a href="{{ url_for('front_office_dashboard') }}" class="nav-item"><span class="nav-icon">⊞</span> Dashboard</a>
+        <div class="nav-section-label">My Academic</div>
+        <a href="{{ url_for('staff_my_courses') }}" class="nav-item"><span class="nav-icon">📚</span> My Courses</a>
+        <a href="{{ url_for('staff_timetable') }}" class="nav-item"><span class="nav-icon">📅</span> My Timetable</a>
+        <a href="{{ url_for('staff_exams') }}" class="nav-item"><span class="nav-icon">📝</span> My Exams</a>
+        <div class="nav-section-label">Communications</div>
+        <a href="{{ url_for('staff_announcements') }}" class="nav-item"><span class="nav-icon">📢</span> Announcements</a>
+        <a href="{{ url_for('staff_notices') }}" class="nav-item"><span class="nav-icon">📣</span> Post Notice</a>
+        <div class="nav-section-label">Account</div>
+        <a href="{{ url_for('staff_profile') }}" class="nav-item"><span class="nav-icon">👤</span> My Profile</a>
+        {% endif %}
+
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ session.get('full_name', session.get('username','U'))[0] }}</div>
+            <div>
+                <div class="user-name">{{ session.get('full_name', session.get('username')) }}</div>
+                <div class="user-role">{{ session.get('role','') | replace('_',' ') | title }}</div>
+            </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+</aside>
+
+<main class="main">
+    <header class="topbar">
+        <div>
+            <h1 class="page-title">Messages</h1>
+            <p class="page-subtitle">Your inbox and sent messages</p>
+        </div>
+        <div style="display:flex; align-items:center; gap:12px;">
+            <div class="date-badge" id="live-date"></div>
+            <button class="btn-primary" onclick="showCompose()"
+                    style="display:inline-flex; align-items:center; gap:6px;">
+                ✏️ New Message
+            </button>
+        </div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for category, message in messages %}
+        <div class="flash-msg" style="{% if category=='success'%}background:#dcfce7;border-color:#86efac;color:#166534;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div style="padding:20px 32px;">
+        <div class="msg-layout">
+
+            <!-- LEFT — MESSAGE LIST -->
+            <div class="msg-sidebar">
+                <div class="msg-tabs">
+                    <div class="msg-tab active" onclick="switchTab('inbox', this)">
+                        📬 Inbox
+                        {% if unread > 0 %}
+                        <span style="background:#c0392b; color:white; font-size:10px;
+                                     padding:1px 6px; border-radius:10px; margin-left:4px;">
+                            {{ unread }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="msg-tab" onclick="switchTab('sent', this)">📤 Sent</div>
+                </div>
+
+                <!-- INBOX -->
+                <div class="msg-list" id="inbox-list">
+                    {% for msg in inbox %}
+                    <div class="msg-item {{ 'unread' if not msg.is_read else '' }}"
+                         onclick="viewMessage(
+                             {{ msg.id }},
+                             '{{ msg.sender_name | replace("'", "\\'") }}',
+                             '{{ msg.subject | replace("'", "\\'") }}',
+                             '{{ msg.body | replace("'", "\\'") | replace("\n", "\\n") }}',
+                             '{{ msg.date_sent.strftime("%d %b %Y %H:%M") }}',
+                             {{ msg.id }},
+                             '{{ msg.sender_id }}'
+                         )">
+                        <div class="msg-item-header">
+                            <span class="msg-item-from">
+                                {{ msg.sender_name }}
+                                {% if not msg.is_read %}<span class="unread-dot"></span>{% endif %}
+                            </span>
+                            <span class="msg-item-date">{{ msg.date_sent.strftime('%d %b') }}</span>
+                        </div>
+                        <div class="msg-item-subject">{{ msg.subject }}</div>
+                        <div class="msg-item-preview">{{ msg.body[:60] }}...</div>
+                    </div>
+                    {% else %}
+                    <div class="empty-state" style="padding:30px; text-align:center;">
+                        No messages yet
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- SENT -->
+                <div class="msg-list" id="sent-list" style="display:none;">
+                    {% for msg in sent %}
+                    <div class="msg-item"
+                         onclick="viewSent(
+                             '{{ msg.receiver_id }}',
+                             '{{ msg.subject | replace("'", "\\'") }}',
+                             '{{ msg.body | replace("'", "\\'") | replace("\n", "\\n") }}',
+                             '{{ msg.date_sent.strftime("%d %b %Y %H:%M") }}'
+                         )">
+                        <div class="msg-item-header">
+                            <span class="msg-item-from">To: {{ msg.receiver_id }}</span>
+                            <span class="msg-item-date">{{ msg.date_sent.strftime('%d %b') }}</span>
+                        </div>
+                        <div class="msg-item-subject">{{ msg.subject }}</div>
+                        <div class="msg-item-preview">{{ msg.body[:60] }}...</div>
+                    </div>
+                    {% else %}
+                    <div class="empty-state" style="padding:30px; text-align:center;">
+                        No sent messages
+                    </div>
+                    {% endfor %}
+                </div>
+
+            </div>
+
+            <!-- RIGHT — MESSAGE VIEW / COMPOSE -->
+            <div class="msg-main">
+
+                <!-- WELCOME STATE -->
+                <div class="welcome-panel" id="welcome-panel">
+                    <div style="font-size:3rem; margin-bottom:12px;">💬</div>
+                    <div style="font-size:1rem; font-weight:600; color:var(--text);">
+                        Select a message to read
+                    </div>
+                    <div style="font-size:0.85rem; color:var(--muted); margin-top:6px;">
+                        or click New Message to compose
+                    </div>
+                </div>
+
+                <!-- MESSAGE VIEW -->
+                <div class="msg-view" id="msg-view">
+                    <div style="display:flex; justify-content:space-between;
+                                align-items:flex-start; margin-bottom:20px;">
+                        <div>
+                            <h2 id="view-subject"
+                                style="font-family:'Playfair Display',serif;
+                                       font-size:1.3rem; color:var(--navy); margin-bottom:6px;">
+                            </h2>
+                            <div id="view-meta" style="font-size:0.8rem; color:var(--muted);"></div>
+                        </div>
+                        <form method="POST" id="delete-form" action=""
+                              onsubmit="return confirm('Delete this message?')">
+                            <button type="submit"
+                                    style="background:#fee2e2; color:#991b1b; border:none;
+                                           padding:6px 14px; border-radius:6px; font-size:0.78rem;
+                                           cursor:pointer; font-family:inherit; font-weight:600;">
+                                Delete
+                            </button>
+                        </form>
+                    </div>
+                    <div style="background:#f8fafc; border-radius:10px; padding:20px;
+                                font-size:0.9rem; line-height:1.7; color:var(--text);"
+                         id="view-body">
+                    </div>
+
+                    <button class="btn-reply" onclick="toggleReply()">↩️ Reply</button>
+
+                    <!-- REPLY BOX -->
+                    <div class="reply-box" id="reply-box">
+                        <div style="font-size:0.85rem; font-weight:600; color:var(--navy);
+                                    margin-bottom:12px;">↩️ Reply</div>
+                        <form method="POST" action="{{ url_for('send_message') }}">
+                            <input type="hidden" name="receiver_id" id="reply-receiver">
+                            <input type="hidden" name="reply_to"    id="reply-to-id">
+                            <input type="hidden" name="subject"     id="reply-subject">
+                            <div class="form-field">
+                                <textarea name="body" placeholder="Write your reply..."
+                                          rows="4" required></textarea>
+                            </div>
+                            <button type="submit" class="btn-primary" style="font-size:0.875rem;">
+                                📤 Send Reply
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- COMPOSE -->
+                <div class="compose-panel" id="compose-panel">
+                    <h2 style="font-family:'Playfair Display',serif; font-size:1.2rem;
+                               color:var(--navy); margin-bottom:20px;">
+                        ✏️ New Message
+                    </h2>
+                    <form method="POST" action="{{ url_for('send_message') }}">
+                        <div class="form-field">
+                            <label>To</label>
+                            <select name="receiver_id" id="receiver-select" required>
+                                <option value="">Select recipient...</option>
+                                {% for contact in contacts %}
+                                <option value="{{ contact.staff_id }}"
+                                    {% if auto_contact and auto_contact.staff_id == contact.staff_id %}
+                                        selected
+                                    {% endif %}>
+                                    {{ contact.full_name or contact.staff_id }}
+                                    ({{ contact.role | replace('_',' ') | title }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label>Subject</label>
+                            <input type="text" name="subject"
+                                   placeholder="Message subject" required
+                                   value="{% if auto_contact %}Finance Query{% endif %}">
+                        </div>
+                        <div class="form-field">
+                            <label>Message</label>
+                            <textarea name="body"
+                                      placeholder="Write your message here..."
+                                      rows="8" required></textarea>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <button type="submit" class="btn-primary">📤 Send Message</button>
+                            <button type="button" class="btn-outline"
+                                    onclick="showWelcome()">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</main>
+
+<script>
+document.getElementById('live-date').textContent = new Date().toLocaleDateString('en-US', {
+    weekday:'long', year:'numeric', month:'long', day:'numeric'
+});
+
+function switchTab(tab, el) {
+    document.querySelectorAll('.msg-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('inbox-list').style.display = tab === 'inbox' ? '' : 'none';
+    document.getElementById('sent-list').style.display  = tab === 'sent'  ? '' : 'none';
+    showWelcome();
+}
+
+function showWelcome() {
+    document.getElementById('welcome-panel').style.display = '';
+    document.getElementById('msg-view').classList.remove('active');
+    document.getElementById('compose-panel').classList.remove('active');
+}
+
+function showCompose() {
+    document.getElementById('welcome-panel').style.display = 'none';
+    document.getElementById('msg-view').classList.remove('active');
+    document.getElementById('compose-panel').classList.add('active');
+}
+
+function viewMessage(id, from, subject, body, date, msgId, senderId) {
+    document.getElementById('welcome-panel').style.display = 'none';
+    document.getElementById('compose-panel').classList.remove('active');
+    document.getElementById('msg-view').classList.add('active');
+    document.getElementById('view-subject').textContent = subject;
+    document.getElementById('view-meta').textContent    = `From: ${from} · ${date}`;
+    document.getElementById('view-body').textContent    = body;
+    document.getElementById('delete-form').action       = `/messages/delete/${msgId}`;
+    document.getElementById('reply-receiver').value     = senderId;
+    document.getElementById('reply-to-id').value        = msgId;
+    document.getElementById('reply-subject').value      = 'Re: ' + subject;
+    document.getElementById('reply-box').classList.remove('open');
+    document.querySelector('.btn-reply').style.display  = '';
+    fetch(`/messages/read/${id}`);
+}
+
+function viewSent(to, subject, body, date) {
+    document.getElementById('welcome-panel').style.display = 'none';
+    document.getElementById('compose-panel').classList.remove('active');
+    document.getElementById('msg-view').classList.add('active');
+    document.getElementById('view-subject').textContent = subject;
+    document.getElementById('view-meta').textContent    = `To: ${to} · ${date}`;
+    document.getElementById('view-body').textContent    = body;
+    document.getElementById('reply-box').classList.remove('open');
+    document.querySelector('.btn-reply').style.display  = 'none';
+}
+
+function toggleReply() {
+    const box = document.getElementById('reply-box');
+    box.classList.toggle('open');
+    document.querySelector('.btn-reply').style.display = 'none';
+}
+
+// Auto open compose if coming from finance overview
+{% if auto_contact %}
+showCompose();
+{% endif %}
+</script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Announcements | Cleveland Medical College</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+    <style>
+        .priority-normal    { background:#f1f5f9; color:#475569; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .priority-important { background:#fef9c3; color:#854d0e; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .priority-urgent    { background:#fee2e2; color:#991b1b; padding:3px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; }
+        .ann-card {
+            background:white; border-radius:12px; padding:20px;
+            box-shadow:0 1px 4px rgba(0,0,0,0.06);
+            border-left:4px solid var(--navy);
+            margin-bottom:14px; transition:transform 0.2s;
+        }
+        .ann-card:hover { transform:translateY(-2px); }
+        .ann-card.urgent    { border-left-color:#991b1b; }
+        .ann-card.important { border-left-color:#854d0e; }
+        .ann-card.normal    { border-left-color:var(--navy); }
+        .ann-title {
+            font-family:'Playfair Display',serif;
+            font-size:1rem; color:var(--navy);
+            margin-bottom:8px; font-weight:700;
+        }
+        .ann-message {
+            font-size:0.875rem; color:var(--text);
+            line-height:1.6; margin-bottom:12px;
+        }
+        .ann-meta {
+            display:flex; align-items:center;
+            gap:12px; font-size:0.75rem; color:var(--muted);
+        }
+        .filter-tabs { display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap; }
+        .filter-tab {
+            padding:6px 14px; border-radius:20px; font-size:0.8rem; font-weight:600;
+            cursor:pointer; border:1px solid var(--border);
+            background:white; color:var(--muted); transition:all .18s;
+        }
+        .filter-tab.active,
+        .filter-tab:hover { background:var(--navy); color:white; border-color:var(--navy); }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon">CMC</div>
+        <div><div class="brand-name">Cleveland</div><div class="brand-sub">Medical College</div></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="{{ url_for('front_office_dashboard') }}" class="nav-item">
+            <span class="nav-icon">⊞</span> Dashboard
+        </a>
+        <div class="nav-section-label">My Academic</div>
+        <a href="{{ url_for('staff_my_courses') }}" class="nav-item">
+            <span class="nav-icon">📚</span> My Courses
+        </a>
+        <a href="{{ url_for('staff_timetable') }}" class="nav-item">
+            <span class="nav-icon">📅</span> My Timetable
+        </a>
+        <a href="{{ url_for('staff_exams') }}" class="nav-item">
+            <span class="nav-icon">📝</span> My Exams
+        </a>
+        <div class="nav-section-label">Communications</div>
+        <a href="{{ url_for('staff_announcements') }}" class="nav-item active">
+            <span class="nav-icon">📢</span> Announcements
+        </a>
+        <a href="{{ url_for('staff_notices') }}" class="nav-item">
+            <span class="nav-icon">📣</span> Post Notice
+        </a>
+        <div class="nav-section-label">Account</div>
+        <a href="{{ url_for('staff_profile') }}" class="nav-item">
+            <span class="nav-icon">👤</span> My Profile
+        </a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ session.get('full_name', 'S')[0] }}</div>
+            <div>
+                <div class="user-name">{{ session.get('full_name', session.get('username')) }}</div>
+                <div class="user-role">{{ session.get('job_title', 'Staff') }}</div>
+            </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+</aside>
+
+<main class="main">
+    <header class="topbar">
+        <div>
+            <h1 class="page-title">Announcements</h1>
+            <p class="page-subtitle">Notices from administration · Cleveland Medical College</p>
+        </div>
+        <div class="date-badge" id="live-date"></div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for category, message in messages %}
+        <div class="flash-msg" style="{% if category=='success'%}background:#dcfce7;border-color:#86efac;color:#166534;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div style="padding:24px 32px;">
+
+        <!-- STAT CARDS -->
+        <section class="cards-grid" style="grid-template-columns:repeat(3,1fr);">
+            <div class="card card--blue">
+                <div class="card-label">Total</div>
+                <div class="card-value">{{ announcements | length }}</div>
+                <div class="card-detail">All announcements</div>
+                <div class="card-icon">📢</div>
+            </div>
+            <div class="card card--red">
+                <div class="card-label">Urgent</div>
+                <div class="card-value">
+                    {{ announcements | selectattr('priority', 'equalto', 'Urgent') | list | length }}
+                </div>
+                <div class="card-detail">Urgent notices</div>
+                <div class="card-icon">🚨</div>
+            </div>
+            <div class="card card--orange">
+                <div class="card-label">Important</div>
+                <div class="card-value">
+                    {{ announcements | selectattr('priority', 'equalto', 'Important') | list | length }}
+                </div>
+                <div class="card-detail">Important notices</div>
+                <div class="card-icon">⚠️</div>
+            </div>
+        </section>
+
+        <!-- FILTER TABS -->
+        <div class="filter-tabs" style="margin-top:20px;">
+            <div class="filter-tab active" onclick="filterAnn('all', this)">All</div>
+            <div class="filter-tab" onclick="filterAnn('Urgent', this)">🚨 Urgent</div>
+            <div class="filter-tab" onclick="filterAnn('Important', this)">⚠️ Important</div>
+            <div class="filter-tab" onclick="filterAnn('Normal', this)">Normal</div>
+        </div>
+
+        <!-- SEARCH -->
+        <input type="text" placeholder="🔍 Search announcements..."
+               onkeyup="searchAnn(this)"
+               style="width:100%; padding:10px 16px; border:1px solid var(--border);
+                      border-radius:8px; font-family:inherit; font-size:0.9rem;
+                      outline:none; margin-bottom:20px;">
+
+        <!-- ANNOUNCEMENTS LIST -->
+        <div id="ann-list">
+            {% for ann in announcements %}
+            <div class="ann-card {{ ann.priority.lower() }}" data-priority="{{ ann.priority }}">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                    <div class="ann-title">{{ ann.title }}</div>
+                    <span class="priorit

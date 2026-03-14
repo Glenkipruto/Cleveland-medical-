@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Timetable | Cleveland Medical College</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+    <style>
+        .day-badge {
+            padding:3px 10px; border-radius:20px;
+            font-size:0.75rem; font-weight:600;
+        }
+        .day-Monday    { background:#dbeafe; color:#1e40af; }
+        .day-Tuesday   { background:#dcfce7; color:#166534; }
+        .day-Wednesday { background:#fef9c3; color:#854d0e; }
+        .day-Thursday  { background:#f3e8ff; color:#6b21a8; }
+        .day-Friday    { background:#fee2e2; color:#991b1b; }
+        .day-Saturday  { background:#f1f5f9; color:#475569; }
+        .filter-tabs {
+            display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap;
+        }
+        .filter-tab {
+            padding:6px 14px; border-radius:20px;
+            font-size:0.8rem; font-weight:600;
+            cursor:pointer; border:1px solid var(--border);
+            background:white; color:var(--muted); transition:all .18s;
+        }
+        .filter-tab.active,
+        .filter-tab:hover { background:var(--navy); color:white; border-color:var(--navy); }
+        .today-highlight { background:#eff6ff !important; }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <div class="brand-icon">CMC</div>
+        <div><div class="brand-name">Cleveland</div><div class="brand-sub">Medical College</div></div>
+    </div>
+    <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="{{ url_for('front_office_dashboard') }}" class="nav-item">
+            <span class="nav-icon">⊞</span> Dashboard
+        </a>
+        <div class="nav-section-label">My Academic</div>
+        <a href="{{ url_for('staff_my_courses') }}" class="nav-item">
+            <span class="nav-icon">📚</span> My Courses
+        </a>
+        <a href="{{ url_for('staff_timetable') }}" class="nav-item active">
+            <span class="nav-icon">📅</span> My Timetable
+        </a>
+        <a href="{{ url_for('staff_exams') }}" class="nav-item">
+            <span class="nav-icon">📝</span> My Exams
+        </a>
+        <div class="nav-section-label">Communications</div>
+        <a href="{{ url_for('staff_announcements') }}" class="nav-item">
+            <span class="nav-icon">📢</span> Announcements
+        </a>
+        <a href="{{ url_for('staff_notices') }}" class="nav-item">
+            <span class="nav-icon">📣</span> Post Notice
+        </a>
+        <div class="nav-section-label">Account</div>
+        <a href="{{ url_for('staff_profile') }}" class="nav-item">
+            <span class="nav-icon">👤</span> My Profile
+        </a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ session.get('full_name', 'S')[0] }}</div>
+            <div>
+                <div class="user-name">{{ session.get('full_name', session.get('username')) }}</div>
+                <div class="user-role">{{ session.get('job_title', 'Staff') }}</div>
+            </div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+</aside>
+
+<main class="main">
+    <header class="topbar">
+        <div>
+            <h1 class="page-title">My Timetable</h1>
+            <p class="page-subtitle">Your class schedule · {{ session.get('department', 'CMC') }}</p>
+        </div>
+        <div class="date-badge" id="live-date"></div>
+    </header>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}{% for category, message in messages %}
+        <div class="flash-msg" style="{% if category=='success'%}background:#dcfce7;border-color:#86efac;color:#166534;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}{% endif %}
+    {% endwith %}
+
+    <div style="padding:24px 32px;">
+
+        <!-- STAT CARDS -->
+        <section class="cards-grid" style="grid-template-columns:repeat(3,1fr);">
+            <div class="card card--blue">
+                <div class="card-label">Total Classes</div>
+                <div class="card-value">{{ timetable | length }}</div>
+                <div class="card-detail">All scheduled classes</div>
+                <div class="card-icon">📅</div>
+            </div>
+            <div class="card card--green">
+                <div class="card-label">Today's Classes</div>
+                <div class="card-value" id="today-count">0</div>
+                <div class="card-detail">Scheduled for today</div>
+                <div class="card-icon">✅</div>
+            </div>
+            <div class="card card--orange">
+                <div class="card-label">Subjects</div>
+                <div class="card-value">{{ timetable | map(attribute='subject') | list | unique | list | length }}</div>
+                <div class="card-detail">Different subjects</div>
+                <div class="card-icon">📚</div>
+            </div>
+        </section>
+
+        <!-- FILTER TABS -->
+        <div class="filter-tabs" style="margin-top:20px;">
+            <div class="filter-tab active" onclick="filterDay('all', this)">All Days</div>
+            <div class="filter-tab" onclick="filterDay('Monday', this)">Monday</div>
+            <div class="filter-tab" onclick="filterDay('Tuesday', this)">Tuesday</div>
+            <div class="filter-tab" onclick="filterDay('Wednesday', this)">Wednesday</div>
+            <div class="filter-tab" onclick="filterDay('Thursday', this)">Thursday</div>
+            <div class="filter-tab" onclick="filterDay('Friday', this)">Friday</div>
+            <div class="filter-tab" onclick="filterDay('Saturday', this)">Saturday</div>
+        </div>
+
+        <!-- TIMETABLE TABLE -->
+        <div class="table-card">
+            <div class="table-header">
+                <div class="chart-title">📅 My Class Schedule</div>
+                <input type="text" placeholder="🔍 Search..."
+                       onkeyup="searchTable(this)"
+                       style="padding:8px 14px; border:1px solid var(--border);
+                              border-radius:8px; font-family:inherit;
+                              font-size:0.875rem; outline:none; width:200px;">
+            </div>
+            <table class="data-table" id="tt-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Subject</th>
+                        <th>Program</th>
+                        <th>Day</th>
+                        <th>Time</th>
+                        <th>Room</th>
+                        <th>Year</th>
+                        <th>Semester</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tt in timetable %}
+                    <tr data-day="{{ tt.day }}">
+                        <td>{{ loop.index }}</td>
+                        <td><strong>{{ tt.subject }}</strong></td>
+                        <td>{{ tt.program }}</td>
+                        <td>
+                            <span class="day-badge day-{{ tt.day }}">
+                                {{ tt.day }}
+                            </span>
+                        </td>
+                        <td>{{ tt.start_time }} – {{ tt.end_time }}</td>
+                        <td>{{ tt.room }}</td>
+                        <td>{{ tt.year }}</td>
+                        <td>{{ tt.semester }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            No timetable entries yet. Contact admin to schedule your classes.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</main>
+
+<script>
+// Set live date
+const today = new Date();
+const days  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const todayName = days[today.getDay()];
+
+document.getElementById('live-date').textContent = today.toLocaleDateString('en-US', {
+    weekday:'long', year:'numeric', month:'long', day:'numeric'
+});
+
+// Count today's classes
+const todayRows = document.querySelectorAll(`#tt-table tbody tr[data-day="${todayName}"]`);
+document.getElementById('today-count').textContent = todayRows.length;
+
+// Highlight today's rows
+todayRows.forEach(row => row.classList.add('today-highlight'));
+
+// Filter by day
+function filterDay(day, el) {
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('#tt-table tbody tr').forEach(row => {
+        if (day === 'all') {
+            row.style.display = '';
+        } else {
+            row.style.display = row.dataset.day === day ? '' : 'none';
+        }
+    });
+}
+
+// Search
+function searchTable(input) {
+    const q = input.value.toLowerCase();
+    document.querySelectorAll('#tt-table tbody tr').forEach(row => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+</script>
+</body>
+</html>

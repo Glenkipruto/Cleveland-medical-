@@ -96,8 +96,13 @@
             <h1 class="page-title">Finance Overview</h1>
             <p class="page-subtitle">Read-only financial summary · Academic Year 2025/2026</p>
         </div>
-        <span class="readonly-badge">👁️ View Only — Contact Finance Manager to make changes</span>
-    </header>
+<a href="{{ url_for('messages') }}?to=finance" style="text-decoration:none;">
+    <span class="readonly-badge" style="cursor:pointer; transition: background 0.2s;"
+          onmouseover="this.style.background='#fef08a'"
+          onmouseout="this.style.background='#fef9c3'">
+        👁️ View Only — Contact Finance Manager to make changes
+    </span>
+</a>    </header>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
