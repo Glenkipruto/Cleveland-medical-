@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CMC - Reports</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/report.css') }}">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="crest">C</div>
+    <h2>Cleveland Medical College</h2>
+    <p>Finance Portal</p>
+  </div>
+
+  <div class="sidebar-section">Main</div>
+  <a href="{{ url_for('finance_dashboard') }}" class="nav-item">
+    <span class="nav-icon">📊</span> Dashboard
+  </a>
+
+  <div class="sidebar-section">Finance</div>
+  <a href="{{ url_for('tuition') }}" class="nav-item">
+    <span class="nav-icon">💰</span> Tuition & Payments
+  </a>
+  <a href="{{ url_for('accounts_receivable') }}" class="nav-item">
+    <span class="nav-icon">📥</span> Accounts Receivable
+  </a>
+  <a href="{{ url_for('accounts_payable') }}" class="nav-item">
+    <span class="nav-icon">📤</span> Accounts Payable
+  </a>
+  <a href="{{ url_for('cash_bank') }}" class="nav-item">
+    <span class="nav-icon">🏦</span> Cash & Bank
+  </a>
+  <a href="{{ url_for('grants_donations') }}" class="nav-item">
+    <span class="nav-icon">🎁</span> Grants & Donations
+  </a>
+  <a href="{{ url_for('payroll') }}" class="nav-item">
+    <span class="nav-icon">👥</span> Payroll
+  </a>
+
+  <div class="sidebar-section">Operations</div>
+  <a href="{{ url_for('inventory') }}" class="nav-item">
+    <span class="nav-icon">📦</span> Inventory
+  </a>
+  <a href="{{ url_for('finance_reports') }}" class="nav-item"><span class="nav-icon">📈</span> Reports</a>
+
+  <div class="sidebar-footer">
+    <div class="user-card">
+        <div class="user-avatar">FM</div>
+        <div class="user-info">
+            <p>Finance Manager</p>
+            <span>CMC Finance Dept.</span>
+        </div>
+    </div>
+    <a href="{{ url_for('logout') }}" style="
+        display:block; margin-top:12px; text-align:center;
+        background:rgba(201,168,76,0.1); color:var(--gold);
+        padding:8px; border-radius:8px; text-decoration:none;
+        font-size:13px; font-weight:600; border:1px solid var(--border);
+        transition: background 0.2s;">
+        Logout
+    </a>
+</div>
+</aside>
+
+<div class="main">
+
+  <header class="topbar">
+    <div>
+        <h1>Finance Dashboard</h1>
+        <p>Financial overview · Academic Year 2025/2026</p>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px;">
+        <div id="live-date" style="
+            background:rgba(201,168,76,0.1); color:var(--gold);
+            padding:6px 14px; border-radius:20px;
+            font-size:12px; font-weight:600;
+            border:1px solid var(--border);">
+        </div>
+        <span class="badge">FY 2025/26</span>
+    </div>
+</header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="content">
+
+    <!-- SUMMARY STAT CARDS -->
+    <div class="stats-grid">
+      <div class="stat-card income">
+        <div class="stat-icon">💰</div>
+        <div class="stat-label">Total Income</div>
+        <div class="stat-value">KES {{ "{:,.0f}".format(total_income) }}</div>
+        <div class="stat-change">Tuition + Grants + Donations</div>
+      </div>
+      <div class="stat-card expense">
+        <div class="stat-icon">📤</div>
+        <div class="stat-label">Total Expenses</div>
+        <div class="stat-value">KES {{ "{:,.0f}".format(total_expenses) }}</div>
+        <div class="stat-change">Payables + Payroll</div>
+      </div>
+      <div class="stat-card balance">
+        <div class="stat-icon">🏦</div>
+        <div class="stat-label">Net Balance</div>
+        <div class="stat-value">KES {{ "{:,.0f}".format(net_balance) }}</div>
+        <div class="stat-change">Income minus expenses</div>
+      </div>
+      <div class="stat-card pending">
+        <div class="stat-icon">⏳</div>
+        <div class="stat-label">Outstanding</div>
+        <div class="stat-value">KES {{ "{:,.0f}".format(total_outstanding) }}</div>
+        <div class="stat-change">Pending receivables</div>
+      </div>
+    </div>
+
+    <!-- REPORT SECTIONS -->
+    <div class="reports-grid">
+
+      <!-- TUITION SUMMARY -->
+      <div class="card">
+        <div class="card-title">💰 Tuition & Payments</div>
+        <div class="card-subtitle">Fee collection summary</div>
+        <div class="report-row">
+          <span>Total Collected</span>
+          <span class="amount-pos">KES {{ "{:,.0f}".format(tuition_collected) }}</span>
+        </div>
+        <div class="report-row">
+          <span>Pending Fees</span>
+          <span class="amount-neg">KES {{ "{:,.0f}".format(tuition_pending) }}</span>
+        </div>
+        <div class="report-row">
+          <span>Overdue Fees</span>
+          <span class="amount-neg">KES {{ "{:,.0f}".format(tuition_overdue) }}</span>
+        </div>
+        <div class="report-row report-total">
+          <span>Total Records</span>
+          <span>{{ tuition_records }}</span>
+        </div>
+      </div>
+
+      <!-- RECEIVABLES SUMMARY -->
+      <div class="card">
+        <div class="card-title">📥 Accounts Receivable</div>
+        <div class="card-subtitle">Money owed to the college</div>
+        <div class="report-row">
+          <span>Total Received</span>
+          <span class="amount-pos">KES {{ "{:,.0f}".format(receivable_received) }}</span>
+        </div>
+        <div class="report-row">
+          <span>Outstanding</span>
+          <span class="amount-neg">KES {{ "{:,.0f}".format(receivable_outstanding) }}</span>
+        </div>
+        <div class="report-row">
+          <span>Overdue</span>
+          <span class="amount-neg">KES {{ "{:,.0f}".format(receivable_overdue) }}</span>
+        </div>
+        <div class="report-row report-total">
+          <span>Total Invoices</span>
+          <span>{{ receivable_records }}</span>
+        </div>
+      </div>
+
+      <!-- PAYABLES SUMMARY -->
+      <div class="card">
+        <div class="card-title">📤 Accounts Payable</div>
+        <div class="card-subtitle">Bills the college owes</div>
+        <div class="report-row">
+          <span>Total Paid</span>
+          <span class="amount-pos">KES {{ "{:,.0f}".format(payable_paid) }}</span>
+        </div>
+        <div class="report-row">
+          <span>Pending Bills</span>
+          <span class="amount-neg">KES {{ "{:,.0f}".format(payable_pending) }}</span>
+        </div>
+        <div class="report-row">
+          <span>Overdue Bills</span>
+          <span class="amount-neg">KES {{ "{:,.0f}".format(payable_overdue) }}</span>
+        </div>
+        <div class="report-row report-total">
+          <span>Total Bills</span>
+          <span>{{ payable_records }}</span>
+        </div>
+      </div>
+
+      <!-- CASH & BANK SUMMARY -->
+      <div class="card">
+        <div class="card-title">🏦 Cash & Bank</div>
+        <div class="card-subtitle">Cash and bank transactions</div>
+        <div class="report-row">
+          <span>Total Deposits</span>
+          <span class="amount-pos">KES {{ "{:,.0f}".format(cash_deposits) }}</span>
+        </div>
+        <div class="report-row">
+          <span>Total Withdrawals</span>
+          <span class="amount-neg">KES {{ "{:,.0f}".format(cash_withdrawals) }}</span>
+        </div>
+        <div class="report-row report-total">
+          <span>Net Cash Flow</span>
+          <span class="{{ 'amount-pos' if cash_deposits >= cash_withdrawals else 'amount-neg' }}">
+            KES {{ "{:,.0f}".format(cash_deposits - cash_withdrawals) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- GRANTS SUMMARY -->
+      <div class="card">
+        <div class="card-title">🎁 Grants & Donations</div>
+        <div class="card-subtitle">External funding received</div>
+        <div class="report-row">
+          <span>Total Grants</span>
+          <span class="amount-pos">KES {{ "{:,.0f}".format(grants_total) }}</span>
+        </div>
+        <div class="report-row">
+          <span>Total Donations</span>
+          <span class="amount-pos">KES {{ "{:,.0f}".format(donations_total) }}</span>
+        </div>
+        <div class="report-row report-total">
+          <span>Total Funding</span>
+          <span class="amount-pos">KES {{ "{:,.0f}".format(grants_total + donations_total) }}</span>
+        </div>
+      </div>
+
+      <!-- PAYROLL SUMMARY -->
+      <div class="card">
+        <div class="card-title">👥 Payroll</div>
+        <div class="card-subtitle">Staff salary summary</div>
+        <div class="report-row">
+          <span>Total Staff</span>
+          <span>{{ payroll_staff }}</span>
+        </div>
+        <div class="report-row">
+          <span>Monthly Payroll</span>
+          <span class="amount-neg">KES {{ "{:,.0f}".format(payroll_total) }}</span>
+        </div>
+        <div class="report-row">
+          <span>Paid</span>
+          <span class="amount-pos">KES {{ "{:,.0f}".format(payroll_paid) }}</span>
+        </div>
+        <div class="report-row report-total">
+          <span>Pending</span>
+          <span class="amount-neg">KES {{ "{:,.0f}".format(payroll_pending) }}</span>
+        </div>
+      </div>
+
+      <!-- INVENTORY SUMMARY -->
+      <div class="card">
+        <div class="card-title">📦 Inventory</div>
+        <div class="card-subtitle">Assets and supplies summary</div>
+        <div class="report-row">
+          <span>Total Items</span>
+          <span>{{ inventory_items }}</span>
+        </div>
+        <div class="report-row">
+          <span>Total Value</span>
+          <span class="amount-pos">KES {{ "{:,.0f}".format(inventory_value) }}</span>
+        </div>
+        <div class="report-row report-total">
+          <span>Low Stock Items</span>
+          <span class="amount-neg">{{ inventory_low_stock }}</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+<script>
+    document.getElementById('live-date').textContent = new Date().toLocaleDateString('en-US', {
+        weekday:'long', year:'numeric', month:'long', day:'numeric'
+    });
+</script>
+</body>
+</html>

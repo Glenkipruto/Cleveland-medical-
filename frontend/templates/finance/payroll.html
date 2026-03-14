@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CMC - Payroll</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/finance.css') }}">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="crest">C</div>
+    <h2>Cleveland Medical College</h2>
+    <p>Finance Portal</p>
+  </div>
+
+  <div class="sidebar-section">Main</div>
+<a href="{{ url_for('finance_dashboard') }}" class="nav-item">
+  <span class="nav-icon">📊</span> Dashboard
+</a>
+
+<div class="sidebar-section">Finance</div>
+<a href="{{ url_for('tuition') }}" class="nav-item">
+  <span class="nav-icon">💰</span> Tuition & Payments
+</a>
+<a href="{{ url_for('accounts_receivable') }}" class="nav-item">
+  <span class="nav-icon">📥</span> Accounts Receivable
+</a>
+<a href="{{ url_for('accounts_payable') }}" class="nav-item">
+  <span class="nav-icon">📤</span> Accounts Payable
+</a>
+<a href="{{ url_for('cash_bank') }}" class="nav-item">
+  <span class="nav-icon">🏦</span> Cash & Bank
+</a>
+<a href="{{ url_for('grants_donations') }}" class="nav-item">
+  <span class="nav-icon">🎁</span> Grants & Donations
+</a>
+<a href="{{ url_for('payroll') }}" class="nav-item">
+  <span class="nav-icon">👥</span> Payroll
+</a>
+
+<div class="sidebar-section">Operations</div>
+<a href="{{ url_for('inventory') }}" class="nav-item">
+  <span class="nav-icon">📦</span> Inventory
+</a>
+<a href="{{ url_for('finance_reports') }}" class="nav-item"><span class="nav-icon">📈</span> Reports</a>
+  <div class="sidebar-footer">
+    <div class="user-card">
+        <div class="user-avatar">FM</div>
+        <div class="user-info">
+            <p>Finance Manager</p>
+            <span>CMC Finance Dept.</span>
+        </div>
+    </div>
+    <a href="{{ url_for('logout') }}" style="
+        display:block; margin-top:12px; text-align:center;
+        background:rgba(201,168,76,0.1); color:var(--gold);
+        padding:8px; border-radius:8px; text-decoration:none;
+        font-size:13px; font-weight:600; border:1px solid var(--border);
+        transition: background 0.2s;">
+        Logout
+    </a>
+</div>
+</aside>
+
+<div class="main">
+
+  <header class="topbar">
+    <div>
+        <h1>Finance Dashboard</h1>
+        <p>Financial overview · Academic Year 2025/2026</p>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px;">
+        <div id="live-date" style="
+            background:rgba(201,168,76,0.1); color:var(--gold);
+            padding:6px 14px; border-radius:20px;
+            font-size:12px; font-weight:600;
+            border:1px solid var(--border);">
+        </div>
+        <span class="badge">FY 2025/26</span>
+    </div>
+</header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="content">
+
+    <div class="stats-grid">
+      <div class="stat-card expense">
+        <div class="stat-icon">💼</div>
+        <div class="stat-label">Total Monthly Payroll</div>
+        <div class="stat-value">KES {{ "{:,.0f}".format(total_net_pay) }}</div>
+        <div class="stat-change">All staff net pay</div>
+      </div>
+      <div class="stat-card income">
+        <div class="stat-icon">✅</div>
+        <div class="stat-label">Paid This Month</div>
+        <div class="stat-value">KES {{ "{:,.0f}".format(total_paid) }}</div>
+        <div class="stat-change">Processed salaries</div>
+      </div>
+      <div class="stat-card pending">
+        <div class="stat-icon">⏳</div>
+        <div class="stat-label">Pending</div>
+        <div class="stat-value">KES {{ "{:,.0f}".format(total_pending) }}</div>
+        <div class="stat-change">Yet to be processed</div>
+      </div>
+      <div class="stat-card balance">
+        <div class="stat-icon">👤</div>
+        <div class="stat-label">Total Staff</div>
+        <div class="stat-value">{{ total_staff }}</div>
+        <div class="stat-change">Active employees</div>
+      </div>
+    </div>
+
+    <div class="dash-row" style="grid-template-columns: 1fr 2fr;">
+
+      <!-- ADD STAFF FORM -->
+      <div class="card">
+        <div class="card-title">Add Staff to Payroll</div>
+        <div class="card-subtitle">Register a new employee</div>
+
+        <form method="POST" action="{{ url_for('add_payroll') }}">
+          <div class="form-group">
+            <label>Staff ID</label>
+            <input type="text" name="staff_id" placeholder="e.g. CMC-STF-001" required>
+          </div>
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" name="name" placeholder="Full name" required>
+          </div>
+          <div class="form-group">
+            <label>Department</label>
+            <select name="department" required>
+              <option value="">Select...</option>
+              <option>Medical Sciences</option>
+              <option>Administration</option>
+              <option>Library</option>
+              <option>Facilities</option>
+              <option>IT Department</option>
+              <option>Student Services</option>
+              <option>Finance</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Role</label>
+            <select name="role" required>
+              <option value="">Select...</option>
+              <option>Senior Lecturer</option>
+              <option>Lecturer</option>
+              <option>Administrator</option>
+              <option>IT Manager</option>
+              <option>Head Librarian</option>
+              <option>Nurse</option>
+              <option>Technician</option>
+              <option>Finance Manager</option>
+              <option>Support Staff</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Basic Salary (KES)</label>
+            <input type="number" name="basic_salary" placeholder="0" min="0" required>
+          </div>
+          <div class="form-group">
+            <label>Allowances (KES)</label>
+            <input type="number" name="allowances" placeholder="0" min="0" value="0">
+          </div>
+          <div class="form-group">
+            <label>Payment Status</label>
+            <select name="status">
+              <option value="Paid">Paid</option>
+              <option value="Pending">Pending</option>
+            </select>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">Add Staff</button>
+            <button type="reset" class="btn-secondary">Clear</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- PAYROLL TABLE -->
+      <div class="card">
+        <div class="card-title">Payroll Records</div>
+        <div class="card-subtitle">All staff salary records</div>
+
+        <input type="text" placeholder="Search by name or department..."
+               oninput="searchTable(this.value)" style="margin-bottom:14px;">
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Staff ID</th>
+                <th>Name</th>
+                <th>Department</th>
+                <th>Role</th>
+                <th>Basic Salary</th>
+                <th>Allowances</th>
+                <th>Net Pay</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="payroll-tbody">
+              {% for staff in payroll %}
+              <tr>
+                <td style="color:#8a96b0; font-size:11px;">{{ loop.index }}</td>
+                <td style="color:#8a96b0; font-size:11px;">{{ staff.staff_id }}</td>
+                <td>{{ staff.name }}</td>
+                <td>{{ staff.department }}</td>
+                <td>{{ staff.role }}</td>
+                <td class="amount-neu">KES {{ "{:,.0f}".format(staff.basic_salary) }}</td>
+                <td class="amount-pos">+ KES {{ "{:,.0f}".format(staff.allowances) }}</td>
+                <td class="amount-neu" style="font-weight:700;">
+                  KES {{ "{:,.0f}".format(staff.basic_salary + staff.allowances) }}
+                </td>
+                <td>
+                  <span class="status-badge status-{{ staff.status.lower() }}">
+                    {{ staff.status }}
+                  </span>
+                </td>
+                <td>
+                  <form method="POST" action="{{ url_for('delete_payroll', staff_id=staff.id) }}"
+                        onsubmit="return confirm('Remove this staff from payroll?')">
+                    <button type="submit" class="btn-danger">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="10" style="text-align:center; color:#8a96b0; padding:30px;">
+                  No staff records yet.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  function searchTable(query) {
+    const rows = document.querySelectorAll('#payroll-tbody tr');
+    const q = query.toLowerCase();
+    rows.forEach(row => {
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }
+</script>
+<script>
+    document.getElementById('live-date').textContent = new Date().toLocaleDateString('en-US', {
+        weekday:'long', year:'numeric', month:'long', day:'numeric'
+    });
+</script>
+</body>
+</html>

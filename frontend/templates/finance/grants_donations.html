@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CMC - Grants & Donations</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/finance.css') }}">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="crest">C</div>
+    <h2>Cleveland Medical College</h2>
+    <p>Finance Portal</p>
+  </div>
+
+  <div class="sidebar-section">Main</div>
+<a href="{{ url_for('finance_dashboard') }}" class="nav-item">
+  <span class="nav-icon">📊</span> Dashboard
+</a>
+
+<div class="sidebar-section">Finance</div>
+<a href="{{ url_for('tuition') }}" class="nav-item">
+  <span class="nav-icon">💰</span> Tuition & Payments
+</a>
+<a href="{{ url_for('accounts_receivable') }}" class="nav-item">
+  <span class="nav-icon">📥</span> Accounts Receivable
+</a>
+<a href="{{ url_for('accounts_payable') }}" class="nav-item">
+  <span class="nav-icon">📤</span> Accounts Payable
+</a>
+<a href="{{ url_for('cash_bank') }}" class="nav-item">
+  <span class="nav-icon">🏦</span> Cash & Bank
+</a>
+<a href="{{ url_for('grants_donations') }}" class="nav-item">
+  <span class="nav-icon">🎁</span> Grants & Donations
+</a>
+<a href="{{ url_for('payroll') }}" class="nav-item">
+  <span class="nav-icon">👥</span> Payroll
+</a>
+
+<div class="sidebar-section">Operations</div>
+<a href="{{ url_for('inventory') }}" class="nav-item">
+  <span class="nav-icon">📦</span> Inventory
+</a>
+<a href="{{ url_for('finance_reports') }}" class="nav-item"><span class="nav-icon">📈</span> Reports</a>
+  <div class="sidebar-footer">
+    <div class="user-card">
+        <div class="user-avatar">FM</div>
+        <div class="user-info">
+            <p>Finance Manager</p>
+            <span>CMC Finance Dept.</span>
+        </div>
+    </div>
+    <a href="{{ url_for('logout') }}" style="
+        display:block; margin-top:12px; text-align:center;
+        background:rgba(201,168,76,0.1); color:var(--gold);
+        padding:8px; border-radius:8px; text-decoration:none;
+        font-size:13px; font-weight:600; border:1px solid var(--border);
+        transition: background 0.2s;">
+        Logout
+    </a>
+</div>
+</aside>
+
+<div class="main">
+
+  <header class="topbar">
+    <div>
+        <h1>Finance Dashboard</h1>
+        <p>Financial overview · Academic Year 2025/2026</p>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px;">
+        <div id="live-date" style="
+            background:rgba(201,168,76,0.1); color:var(--gold);
+            padding:6px 14px; border-radius:20px;
+            font-size:12px; font-weight:600;
+            border:1px solid var(--border);">
+        </div>
+        <span class="badge">FY 2025/26</span>
+    </div>
+</header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="content">
+
+    <div class="stats-grid">
+      <div class="stat-card income">
+        <div class="stat-icon">🎁</div>
+        <div class="stat-label">Total Grants</div>
+        <div class="stat-value">KES {{ "{:,.0f}".format(total_grants) }}</div>
+        <div class="stat-change">All grants received</div>
+      </div>
+      <div class="stat-card balance">
+        <div class="stat-icon">🤝</div>
+        <div class="stat-label">Total Donations</div>
+        <div class="stat-value">KES {{ "{:,.0f}".format(total_donations) }}</div>
+        <div class="stat-change">All donations received</div>
+      </div>
+      <div class="stat-card pending">
+        <div class="stat-icon">⏳</div>
+        <div class="stat-label">Pending</div>
+        <div class="stat-value">KES {{ "{:,.0f}".format(total_pending) }}</div>
+        <div class="stat-change">Awaiting disbursement</div>
+      </div>
+      <div class="stat-card expense">
+        <div class="stat-icon">📊</div>
+        <div class="stat-label">Total Records</div>
+        <div class="stat-value">{{ total_records }}</div>
+        <div class="stat-change">All entries</div>
+      </div>
+    </div>
+
+    <div class="dash-row" style="grid-template-columns: 1fr 2fr;">
+
+      <!-- ADD FORM -->
+      <div class="card">
+        <div class="card-title">Add Grant / Donation</div>
+        <div class="card-subtitle">Record a new grant or donation</div>
+
+        <form method="POST" action="{{ url_for('add_grant_donation') }}">
+          <div class="form-group">
+            <label>Donor / Organization</label>
+            <input type="text" name="donor_name" placeholder="e.g. Kenya Government" required>
+          </div>
+          <div class="form-group">
+            <label>Type</label>
+            <select name="type" required>
+              <option value="">Select...</option>
+              <option>Grant</option>
+              <option>Donation</option>
+              <option>Scholarship Fund</option>
+              <option>Research Funding</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Purpose</label>
+            <input type="text" name="purpose" placeholder="e.g. Laboratory Equipment" required>
+          </div>
+          <div class="form-group">
+            <label>Amount (KES)</label>
+            <input type="number" name="amount" placeholder="0" min="1" required>
+          </div>
+          <div class="form-group">
+            <label>Date Received</label>
+            <input type="date" name="date_received" required>
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select name="status">
+              <option value="Received">Received</option>
+              <option value="Pending">Pending</option>
+              <option value="Closed">Closed</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" placeholder="Any additional notes..."></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">Add Record</button>
+            <button type="reset" class="btn-secondary">Clear</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- TABLE -->
+      <div class="card">
+        <div class="card-title">Grants & Donations Records</div>
+        <div class="card-subtitle">All grants and donations received by the college</div>
+
+        <input type="text" placeholder="Search by donor or purpose..."
+               oninput="searchTable(this.value)" style="margin-bottom:14px;">
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Donor</th>
+                <th>Type</th>
+                <th>Purpose</th>
+                <th>Amount</th>
+                <th>Date Received</th>
+                <th>Notes</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="grants-tbody">
+              {% for item in records %}
+              <tr>
+                <td style="color:#8a96b0; font-size:11px;">{{ loop.index }}</td>
+                <td>{{ item.donor_name }}</td>
+                <td>
+                  <span class="status-badge status-paid">{{ item.type }}</span>
+                </td>
+                <td>{{ item.purpose }}</td>
+                <td class="amount-pos">KES {{ "{:,.0f}".format(item.amount) }}</td>
+                <td style="color:#8a96b0; font-size:11px;">{{ item.date_received.strftime('%d %b %Y') }}</td>
+                <td style="color:#8a96b0; font-size:11px;">{{ item.notes or '—' }}</td>
+                <td>
+                  <span class="status-badge status-{{ item.status.lower() }}">
+                    {{ item.status }}
+                  </span>
+                </td>
+                <td>
+                  <form method="POST" action="{{ url_for('delete_grant_donation', item_id=item.id) }}"
+                        onsubmit="return confirm('Delete this record?')">
+                    <button type="submit" class="btn-danger">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="9" style="text-align:center; color:#8a96b0; padding:30px;">
+                  No grants or donations recorded yet.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  function searchTable(query) {
+    const rows = document.querySelectorAll('#grants-tbody tr');
+    const q = query.toLowerCase();
+    rows.forEach(row => {
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }
+</script>
+<script>
+    document.getElementById('live-date').textContent = new Date().toLocaleDateString('en-US', {
+        weekday:'long', year:'numeric', month:'long', day:'numeric'
+    });
+</script>
+</body>
+</html>

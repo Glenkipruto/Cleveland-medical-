@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CMC - Cash & Bank</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/finance.css') }}">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="crest">C</div>
+    <h2>Cleveland Medical College</h2>
+    <p>Finance Portal</p>
+  </div>
+
+ <div class="sidebar-section">Main</div>
+<a href="{{ url_for('finance_dashboard') }}" class="nav-item">
+  <span class="nav-icon">📊</span> Dashboard
+</a>
+
+<div class="sidebar-section">Finance</div>
+<a href="{{ url_for('tuition') }}" class="nav-item">
+  <span class="nav-icon">💰</span> Tuition & Payments
+</a>
+<a href="{{ url_for('accounts_receivable') }}" class="nav-item">
+  <span class="nav-icon">📥</span> Accounts Receivable
+</a>
+<a href="{{ url_for('accounts_payable') }}" class="nav-item">
+  <span class="nav-icon">📤</span> Accounts Payable
+</a>
+<a href="{{ url_for('cash_bank') }}" class="nav-item">
+  <span class="nav-icon">🏦</span> Cash & Bank
+</a>
+<a href="{{ url_for('grants_donations') }}" class="nav-item">
+  <span class="nav-icon">🎁</span> Grants & Donations
+</a>
+<a href="{{ url_for('payroll') }}" class="nav-item">
+  <span class="nav-icon">👥</span> Payroll
+</a>
+
+<div class="sidebar-section">Operations</div>
+<a href="{{ url_for('inventory') }}" class="nav-item">
+  <span class="nav-icon">📦</span> Inventory
+</a>
+<a href="{{ url_for('finance_reports') }}" class="nav-item"><span class="nav-icon">📈</span> Reports</a>
+
+  <div class="sidebar-footer">
+    <div class="user-card">
+        <div class="user-avatar">FM</div>
+        <div class="user-info">
+            <p>Finance Manager</p>
+            <span>CMC Finance Dept.</span>
+        </div>
+    </div>
+    <a href="{{ url_for('logout') }}" style="
+        display:block; margin-top:12px; text-align:center;
+        background:rgba(201,168,76,0.1); color:var(--gold);
+        padding:8px; border-radius:8px; text-decoration:none;
+        font-size:13px; font-weight:600; border:1px solid var(--border);
+        transition: background 0.2s;">
+        Logout
+    </a>
+</div>
+</aside>
+
+<div class="main">
+
+  <header class="topbar">
+    <div>
+        <h1>Finance Dashboard</h1>
+        <p>Financial overview · Academic Year 2025/2026</p>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px;">
+        <div id="live-date" style="
+            background:rgba(201,168,76,0.1); color:var(--gold);
+            padding:6px 14px; border-radius:20px;
+            font-size:12px; font-weight:600;
+            border:1px solid var(--border);">
+        </div>
+        <span class="badge">FY 2025/26</span>
+    </div>
+</header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="content">
+
+    <!-- STAT CARDS -->
+    <div class="stats-grid">
+      <div class="stat-card income">
+        <div class="stat-icon">💵</div>
+        <div class="stat-label">Cash on Hand</div>
+        <div class="stat-value">KES {{ "{:,.0f}".format(cash_on_hand) }}</div>
+        <div class="stat-change">Available cash</div>
+      </div>
+      <div class="stat-card balance">
+        <div class="stat-icon">🏦</div>
+        <div class="stat-label">Bank Balance</div>
+        <div class="stat-value">KES {{ "{:,.0f}".format(bank_balance) }}</div>
+        <div class="stat-change">Total in bank accounts</div>
+      </div>
+      <div class="stat-card pending">
+        <div class="stat-icon">📥</div>
+        <div class="stat-label">Total Deposits</div>
+        <div class="stat-value">KES {{ "{:,.0f}".format(total_deposits) }}</div>
+        <div class="stat-change">All deposits</div>
+      </div>
+      <div class="stat-card expense">
+        <div class="stat-icon">📤</div>
+        <div class="stat-label">Total Withdrawals</div>
+        <div class="stat-value">KES {{ "{:,.0f}".format(total_withdrawals) }}</div>
+        <div class="stat-change">All withdrawals</div>
+      </div>
+    </div>
+
+    <div class="dash-row" style="grid-template-columns: 1fr 2fr;">
+
+      <!-- ADD TRANSACTION FORM -->
+      <div class="card">
+        <div class="card-title">Record Transaction</div>
+        <div class="card-subtitle">Log a cash or bank transaction</div>
+
+        <form method="POST" action="{{ url_for('add_cash_bank') }}">
+          <div class="form-group">
+            <label>Transaction Type</label>
+            <select name="transaction_type" required>
+              <option value="">Select...</option>
+              <option>Deposit</option>
+              <option>Withdrawal</option>
+              <option>Transfer</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Account</label>
+            <select name="account" required>
+              <option value="">Select...</option>
+              <option>Cash</option>
+              <option>KCB Bank</option>
+              <option>Equity Bank</option>
+              <option>M-Pesa Till</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Description</label>
+            <input type="text" name="description" placeholder="e.g. Fee collection deposit" required>
+          </div>
+          <div class="form-group">
+            <label>Amount (KES)</label>
+            <input type="number" name="amount" placeholder="0" min="1" required>
+          </div>
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" name="date" required>
+          </div>
+          <div class="form-group">
+            <label>Reference No.</label>
+            <input type="text" name="reference" placeholder="e.g. TXN-2025-001">
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">Record</button>
+            <button type="reset" class="btn-secondary">Clear</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- TRANSACTIONS TABLE -->
+      <div class="card">
+        <div class="card-title">Transaction History</div>
+        <div class="card-subtitle">All cash and bank transactions</div>
+
+        <input type="text" placeholder="Search transactions..."
+               oninput="searchTable(this.value)" style="margin-bottom:14px;">
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Type</th>
+                <th>Account</th>
+                <th>Description</th>
+                <th>Amount</th>
+                <th>Reference</th>
+                <th>Date</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="cash-tbody">
+              {% for item in transactions %}
+              <tr>
+                <td style="color:#8a96b0; font-size:11px;">{{ loop.index }}</td>
+                <td>
+                  <span class="status-badge 
+                    {{ 'status-paid' if item.transaction_type == 'Deposit' else 
+                       'status-overdue' if item.transaction_type == 'Withdrawal' else 
+                       'status-pending' }}">
+                    {{ item.transaction_type }}
+                  </span>
+                </td>
+                <td>{{ item.account }}</td>
+                <td>{{ item.description }}</td>
+                <td class="{{ 'amount-pos' if item.transaction_type == 'Deposit' else 'amount-neg' }}">
+                  KES {{ "{:,.0f}".format(item.amount) }}
+                </td>
+                <td style="color:#8a96b0; font-size:11px;">{{ item.reference or '—' }}</td>
+                <td style="color:#8a96b0; font-size:11px;">{{ item.date.strftime('%d %b %Y') }}</td>
+                <td>
+                  <form method="POST" action="{{ url_for('delete_cash_bank', item_id=item.id) }}"
+                        onsubmit="return confirm('Delete this transaction?')">
+                    <button type="submit" class="btn-danger">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="8" style="text-align:center; color:#8a96b0; padding:30px;">
+                  No transactions recorded yet.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  function searchTable(query) {
+    const rows = document.querySelectorAll('#cash-tbody tr');
+    const q = query.toLowerCase();
+    rows.forEach(row => {
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }
+</script>
+<script>
+    document.getElementById('live-date').textContent = new Date().toLocaleDateString('en-US', {
+        weekday:'long', year:'numeric', month:'long', day:'numeric'
+    });
+</script>
+</body>
+</html>

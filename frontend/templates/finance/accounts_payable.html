@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CMC - Accounts Payable</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/finance.css') }}">
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="crest">C</div>
+    <h2>Cleveland Medical College</h2>
+    <p>Finance Portal</p>
+  </div>
+
+  <div class="sidebar-section">Main</div>
+<a href="{{ url_for('finance_dashboard') }}" class="nav-item">
+  <span class="nav-icon">📊</span> Dashboard
+</a>
+
+<div class="sidebar-section">Finance</div>
+<a href="{{ url_for('tuition') }}" class="nav-item">
+  <span class="nav-icon">💰</span> Tuition & Payments
+</a>
+<a href="{{ url_for('accounts_receivable') }}" class="nav-item">
+  <span class="nav-icon">📥</span> Accounts Receivable
+</a>
+<a href="{{ url_for('accounts_payable') }}" class="nav-item">
+  <span class="nav-icon">📤</span> Accounts Payable
+</a>
+<a href="{{ url_for('cash_bank') }}" class="nav-item">
+  <span class="nav-icon">🏦</span> Cash & Bank
+</a>
+<a href="{{ url_for('grants_donations') }}" class="nav-item">
+  <span class="nav-icon">🎁</span> Grants & Donations
+</a>
+<a href="{{ url_for('payroll') }}" class="nav-item">
+  <span class="nav-icon">👥</span> Payroll
+</a>
+
+<div class="sidebar-section">Operations</div>
+<a href="{{ url_for('inventory') }}" class="nav-item">
+  <span class="nav-icon">📦</span> Inventory
+</a>
+
+<a href="{{ url_for('finance_reports') }}" class="nav-item"><span class="nav-icon">📈</span> Reports</a>
+  
+  <div class="sidebar-footer">
+    <div class="user-card">
+        <div class="user-avatar">FM</div>
+        <div class="user-info">
+            <p>Finance Manager</p>
+            <span>CMC Finance Dept.</span>
+        </div>
+    </div>
+    <a href="{{ url_for('logout') }}" style="
+        display:block; margin-top:12px; text-align:center;
+        background:rgba(201,168,76,0.1); color:var(--gold);
+        padding:8px; border-radius:8px; text-decoration:none;
+        font-size:13px; font-weight:600; border:1px solid var(--border);
+        transition: background 0.2s;">
+        Logout
+    </a>
+</div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+
+  <header class="topbar">
+    <div>
+        <h1>Finance Dashboard</h1>
+        <p>Financial overview · Academic Year 2025/2026</p>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px;">
+        <div id="live-date" style="
+            background:rgba(201,168,76,0.1); color:var(--gold);
+            padding:6px 14px; border-radius:20px;
+            font-size:12px; font-weight:600;
+            border:1px solid var(--border);">
+        </div>
+        <span class="badge">FY 2025/26</span>
+    </div>
+</header>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="content">
+
+    <!-- STAT CARDS -->
+    <div class="stats-grid">
+      <div class="stat-card income">
+        <div class="stat-icon">✅</div>
+        <div class="stat-label">Total Paid</div>
+        <div class="stat-value">KES {{ "{:,.0f}".format(total_paid) }}</div>
+        <div class="stat-change">Settled invoices</div>
+      </div>
+      <div class="stat-card pending">
+        <div class="stat-icon">⏳</div>
+        <div class="stat-label">Pending</div>
+        <div class="stat-value">KES {{ "{:,.0f}".format(total_pending) }}</div>
+        <div class="stat-change">Yet to be paid</div>
+      </div>
+      <div class="stat-card expense">
+        <div class="stat-icon">🚨</div>
+        <div class="stat-label">Overdue</div>
+        <div class="stat-value">KES {{ "{:,.0f}".format(total_overdue) }}</div>
+        <div class="stat-change">Past due date</div>
+      </div>
+      <div class="stat-card balance">
+        <div class="stat-icon">📊</div>
+        <div class="stat-label">Total Bills</div>
+        <div class="stat-value">{{ total_records }}</div>
+        <div class="stat-change">All records</div>
+      </div>
+    </div>
+
+    <div class="dash-row" style="grid-template-columns: 1fr 2fr;">
+
+      <!-- ADD PAYABLE FORM -->
+      <div class="card">
+        <div class="card-title">Add Bill</div>
+        <div class="card-subtitle">Record money the college owes</div>
+
+        <form method="POST" action="{{ url_for('add_payable') }}">
+          <div class="form-group">
+            <label>Vendor / Supplier Name</label>
+            <input type="text" name="vendor_name" placeholder="e.g. Kenya Power" required>
+          </div>
+          <div class="form-group">
+            <label>Reference No.</label>
+            <input type="text" name="reference" placeholder="e.g. BILL-2025-001" required>
+          </div>
+          <div class="form-group">
+            <label>Category</label>
+            <select name="category" required>
+              <option value="">Select...</option>
+              <option>Utilities</option>
+              <option>Supplies</option>
+              <option>Equipment</option>
+              <option>Maintenance</option>
+              <option>Services</option>
+              <option>Rent</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Amount (KES)</label>
+            <input type="number" name="amount" placeholder="0" min="1" required>
+          </div>
+          <div class="form-group">
+            <label>Due Date</label>
+            <input type="date" name="due_date" required>
+          </div>
+          <div class="form-group">
+            <label>Status</label>
+            <select name="status">
+              <option value="Pending">Pending</option>
+              <option value="Paid">Paid</option>
+              <option value="Overdue">Overdue</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Notes</label>
+            <textarea name="notes" placeholder="Any additional notes..."></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">Add Bill</button>
+            <button type="reset" class="btn-secondary">Clear</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- PAYABLES TABLE -->
+      <div class="card">
+        <div class="card-title">Bills & Payables</div>
+        <div class="card-subtitle">All bills the college needs to pay</div>
+
+        <input type="text" placeholder="Search by vendor or reference..."
+               oninput="searchTable(this.value)" style="margin-bottom:14px;">
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Vendor</th>
+                <th>Reference</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Due Date</th>
+                <th>Notes</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="payables-tbody">
+              {% for item in payables %}
+              <tr>
+                <td style="color:#8a96b0; font-size:11px;">{{ loop.index }}</td>
+                <td>{{ item.vendor_name }}</td>
+                <td style="color:#8a96b0; font-size:11px;">{{ item.reference }}</td>
+                <td>{{ item.category }}</td>
+                <td class="amount-neg">KES {{ "{:,.0f}".format(item.amount) }}</td>
+                <td style="color:#8a96b0; font-size:11px;">{{ item.due_date.strftime('%d %b %Y') }}</td>
+                <td style="color:#8a96b0; font-size:11px;">{{ item.notes or '—' }}</td>
+                <td>
+                  <span class="status-badge status-{{ item.status.lower() }}">
+                    {{ item.status }}
+                  </span>
+                </td>
+                <td>
+                  <form method="POST" action="{{ url_for('delete_payable', item_id=item.id) }}"
+                        onsubmit="return confirm('Delete this bill?')">
+                    <button type="submit" class="btn-danger">Delete</button>
+                  </form>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="9" style="text-align:center; color:#8a96b0; padding:30px;">
+                  No bills recorded yet.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  function searchTable(query) {
+    const rows = document.querySelectorAll('#payables-tbody tr');
+    const q = query.toLowerCase();
+    rows.forEach(row => {
+      row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+  }
+</script>
+
+<script>
+    document.getElementById('live-date').textContent = new Date().toLocaleDateString('en-US', {
+        weekday:'long', year:'numeric', month:'long', day:'numeric'
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CMC Finance Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/finance.css') }}">
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="crest">C</div>
+    <h2>Cleveland Medical College</h2>
+    <p>Finance Portal</p>
+  </div>
+
+  <!-- MAIN -->
+  <div class="sidebar-section">Main</div>
+  <a href="{{ url_for('finance_dashboard') }}" class="nav-item active">
+    <span class="nav-icon">📊</span> Dashboard
+  </a>
+
+  <!-- FINANCE -->
+  <div class="sidebar-section">Finance</div>
+  <a href="{{ url_for('tuition') }}" class="nav-item"><span class="nav-icon">💰</span> Tuition & Payments</a>
+  <a href="{{ url_for('accounts_receivable') }}" class="nav-item"><span class="nav-icon">📥</span> Accounts Receivable</a>
+  <a href="{{ url_for('accounts_payable') }}" class="nav-item"><span class="nav-icon">📤</span> Accounts Payable</a>
+  <a href="{{ url_for('cash_bank') }}" class="nav-item"><span class="nav-icon">🏦</span> Cash & Bank</a>
+  <a href="{{ url_for('grants_donations') }}" class="nav-item"><span class="nav-icon">🎁</span> Grants & Donations</a>
+  <a href="{{ url_for('payroll') }}" class="nav-item"><span class="nav-icon">👥</span> Payroll</a>
+
+  <!-- OPERATIONS -->
+  <div class="sidebar-section">Operations</div>
+  <a href="{{ url_for('inventory') }}" class="nav-item"><span class="nav-icon">📦</span> Inventory</a>
+<a href="{{ url_for('finance_reports') }}" class="nav-item"><span class="nav-icon">📈</span> Reports</a>  <!-- USER -->
+  <div class="sidebar-footer">
+    <div class="user-card">
+        <div class="user-avatar">FM</div>
+        <div class="user-info">
+            <p>Finance Manager</p>
+            <span>CMC Finance Dept.</span>
+        </div>
+    </div>
+    <a href="{{ url_for('logout') }}" style="
+        display:block; margin-top:12px; text-align:center;
+        background:rgba(201,168,76,0.1); color:var(--gold);
+        padding:8px; border-radius:8px; text-decoration:none;
+        font-size:13px; font-weight:600; border:1px solid var(--border);
+        transition: background 0.2s;">
+        Logout
+    </a>
+</div>
+</aside>
+
+<!-- MAIN AREA -->
+<div class="main">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div>
+        <h1>Finance Dashboard</h1>
+        <p>Financial overview · Academic Year 2025/2026</p>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px;">
+        <div id="live-date" style="
+            background:rgba(201,168,76,0.1); color:var(--gold);
+            padding:6px 14px; border-radius:20px;
+            font-size:12px; font-weight:600;
+            border:1px solid var(--border);">
+        </div>
+        <span class="badge">FY 2025/26</span>
+    </div>
+</header>
+
+  <!-- FLASH MESSAGES -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash flash-{{ category }}">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- STAT CARDS -->
+    <div class="stats-grid">
+      <div class="stat-card income">
+        <div class="stat-icon">💰</div>
+        <div class="stat-label">Total Income</div>
+        <div class="stat-value">KES {{ "{:,.0f}".format(total_income) }}</div>
+        <div class="stat-change">Fees collected this term</div>
+      </div>
+      <div class="stat-card expense">
+        <div class="stat-icon">📤</div>
+        <div class="stat-label">Total Expenses</div>
+        <div class="stat-value">KES {{ "{:,.0f}".format(total_expenses) }}</div>
+        <div class="stat-change">All recorded expenses</div>
+      </div>
+      <div class="stat-card pending">
+        <div class="stat-icon">⏳</div>
+        <div class="stat-label">Pending Fees</div>
+        <div class="stat-value">KES {{ "{:,.0f}".format(pending_fees) }}</div>
+        <div class="stat-change">Awaiting payment</div>
+      </div>
+      <div class="stat-card balance">
+        <div class="stat-icon">🏦</div>
+        <div class="stat-label">Net Balance</div>
+        <div class="stat-value">KES {{ "{:,.0f}".format(net_balance) }}</div>
+        <div class="stat-change">Income minus expenses</div>
+      </div>
+    </div>
+
+    <!-- CHART + RECENT PAYMENTS -->
+    <div class="dash-row">
+
+      <div class="card">
+        <div class="card-title">Revenue vs Expenses</div>
+        <div class="card-subtitle">Monthly comparison</div>
+        <div class="chart-bars" id="main-chart"></div>
+        <div class="chart-legend">
+          <div class="legend-item">
+            <div class="legend-dot" style="background:#2a9d5c"></div> Income
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background:#c94040"></div> Expenses
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Recent Payments</div>
+        <div class="card-subtitle">Latest fee collections</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Category</th>
+              <th>Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for fee in recent_fees %}
+            <tr>
+              <td>{{ fee.student_name }}</td>
+              <td>{{ fee.category }}</td>
+              <td class="amount-pos">KES {{ "{:,.0f}".format(fee.amount) }}</td>
+              <td>
+                <span class="status-badge status-{{ fee.status.lower() }}">
+                  {{ fee.status }}
+                </span>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="4" style="text-align:center; color:#8a96b0; padding:20px;">
+                No payments yet.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  fetch('/api/chart-data')
+    .then(r => r.json())
+    .then(data => {
+      const container = document.getElementById('main-chart');
+      const max = Math.max(...data.income, ...data.expenses);
+      data.months.forEach((month, i) => {
+        const group = document.createElement('div');
+        group.style.cssText = 'flex:1; display:flex; flex-direction:column; align-items:center;';
+        const bars = document.createElement('div');
+        bars.style.cssText = 'display:flex; gap:3px; align-items:flex-end; height:120px; width:100%;';
+        const iBar = document.createElement('div');
+        iBar.className = 'bar income-bar';
+        iBar.style.height = `${(data.income[i] / max) * 110}px`;
+        iBar.title = `Income: KES ${data.income[i].toLocaleString()}`;
+        const eBar = document.createElement('div');
+        eBar.className = 'bar expense-bar';
+        eBar.style.height = `${(data.expenses[i] / max) * 110}px`;
+        eBar.title = `Expenses: KES ${data.expenses[i].toLocaleString()}`;
+        bars.appendChild(iBar);
+        bars.appendChild(eBar);
+        group.appendChild(bars);
+        const label = document.createElement('div');
+        label.className = 'bar-label';
+        label.textContent = month;
+        group.appendChild(label);
+        container.appendChild(group);
+      });
+    });
+</script>
+<script>
+    document.getElementById('live-date').textContent = new Date().toLocaleDateString('en-US', {
+        weekday:'long', year:'numeric', month:'long', day:'numeric'
+    });
+</script>
+</body>
+</html>
