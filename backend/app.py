@@ -1,11 +1,11 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime, timedelta
-
+from datetime import date, datetime, timedelta
 
 
 def eat_now():
-    return eat_now() + timedelta(hours=3)
+    from datetime import datetime as dt, timedelta
+    return dt.utcnow() + timedelta(hours=3)
 
 
 
@@ -143,7 +143,7 @@ class FinanceExpense(db.Model):
     amount      = db.Column(db.Float,       nullable=False)
     description = db.Column(db.String(200), nullable=True)
     status      = db.Column(db.String(20),  default='Approved')
-    date        = db.Column(db.DateTime,    default=datetime.eat_now)
+    date        = db.Column(db.DateTime,    default=eat_now)
                                
 
 class Receivable(db.Model):
@@ -155,7 +155,7 @@ class Receivable(db.Model):
     amount       = db.Column(db.Float,       nullable=False)
     due_date     = db.Column(db.Date,        nullable=False)
     status       = db.Column(db.String(20),  default='Outstanding')
-    date_created = db.Column(db.DateTime,    default=datetime.eat_now
+    date_created = db.Column(db.DateTime,    default=eat_now
                              )
 
 class Payable(db.Model):
@@ -168,7 +168,7 @@ class Payable(db.Model):
     due_date     = db.Column(db.Date,        nullable=False)
     notes        = db.Column(db.String(200), nullable=True)
     status       = db.Column(db.String(20),  default='Pending')
-    date_created = db.Column(db.DateTime,    default=datetime.eat_now
+    date_created = db.Column(db.DateTime,    default=eat_now
                              )
 
 class CashBank(db.Model):
@@ -180,7 +180,7 @@ class CashBank(db.Model):
     amount           = db.Column(db.Float,       nullable=False)
     reference        = db.Column(db.String(50),  nullable=True)
     date             = db.Column(db.Date,        nullable=False)
-    date_created     = db.Column(db.DateTime,    default=datetime.eat_now
+    date_created     = db.Column(db.DateTime,    default=eat_now
                                  )
 
 class GrantDonation(db.Model):
@@ -193,7 +193,7 @@ class GrantDonation(db.Model):
     date_received = db.Column(db.Date,        nullable=False)
     notes         = db.Column(db.String(200), nullable=True)
     status        = db.Column(db.String(20),  default='Received')
-    date_created  = db.Column(db.DateTime,    default=datetime.eat_now)
+    date_created  = db.Column(db.DateTime,    default=eat_now)
 
 class FinancePayroll(db.Model):
     __tablename__ = 'finance_payroll'
@@ -205,7 +205,7 @@ class FinancePayroll(db.Model):
     basic_salary = db.Column(db.Float,       nullable=False)
     allowances   = db.Column(db.Float,       default=0)
     status       = db.Column(db.String(20),  default='Pending')
-    date_created = db.Column(db.DateTime,    default=datetime.eat_now)
+    date_created = db.Column(db.DateTime,    default=eat_now)
 
 class FinanceInventory(db.Model):
     __tablename__ = 'finance_inventory'
@@ -217,7 +217,7 @@ class FinanceInventory(db.Model):
     unit_price   = db.Column(db.Float,       nullable=False)
     min_stock    = db.Column(db.Integer,     default=5)
     condition    = db.Column(db.String(20),  default='Good')
-    date_created = db.Column(db.DateTime,    default=datetime.eat_now)
+    date_created = db.Column(db.DateTime,    default=eat_now)
 
 # ── MODELS KEPT FOR REPORTS COMPATIBILITY ──
 
@@ -321,7 +321,7 @@ class Message(db.Model):
     subject     = db.Column(db.String(200), nullable=False)
     body        = db.Column(db.Text,        nullable=False)
     is_read     = db.Column(db.Boolean,     default=False)
-    date_sent   = db.Column(db.DateTime,    default=datetime.eat_now)
+    date_sent   = db.Column(db.DateTime,    default=eat_now)
     reply_to    = db.Column(db.Integer,     db.ForeignKey('messages.id'), nullable=True)
 
 

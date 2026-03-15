@@ -153,6 +153,51 @@
         <div id="ann-list">
             {% for ann in announcements %}
             <div class="ann-card {{ ann.priority.lower() }}" data-priority="{{ ann.priority }}">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px;">
+                <div style="display:flex; justify-content:space-between;
+                            align-items:flex-start; margin-bottom:8px;">
                     <div class="ann-title">{{ ann.title }}</div>
-                    <span class="priorit
+                    <span class="priority-{{ ann.priority.lower() }}">{{ ann.priority }}</span>
+                </div>
+                <div class="ann-message">{{ ann.message }}</div>
+                <div class="ann-meta">
+                    <span>📅 {{ ann.date }}</span>
+                    <span>👤 {{ ann.posted_by }}</span>
+                    <span>👥 {{ ann.audience }}</span>
+                </div>
+            </div>
+            {% else %}
+            <div class="empty-state" style="padding:40px; text-align:center;">
+                No announcements yet.
+            </div>
+            {% endfor %}
+        </div>
+
+    </div>
+</main>
+
+<script>
+document.getElementById('live-date').textContent = new Date().toLocaleDateString('en-US', {
+    weekday:'long', year:'numeric', month:'long', day:'numeric'
+});
+
+function filterAnn(priority, el) {
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.ann-card').forEach(card => {
+        if (priority === 'all') {
+            card.style.display = '';
+        } else {
+            card.style.display = card.dataset.priority === priority ? '' : 'none';
+        }
+    });
+}
+
+function searchAnn(input) {
+    const q = input.value.toLowerCase();
+    document.querySelectorAll('.ann-card').forEach(card => {
+        card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+    });
+}
+</script>
+</body>
+</html>
