@@ -9,10 +9,13 @@ def eat_now():
     return dt.utcnow() + timedelta(hours=3)
 
 
+
+import os as _os
+_base = _os.path.dirname(_os.path.abspath(__file__))
 app = Flask(
     __name__,
-    template_folder="../frontend/templates",
-    static_folder="../frontend/static"
+    template_folder=_os.path.join(_base, '..', 'frontend', 'templates'),
+    static_folder=_os.path.join(_base, '..', 'frontend', 'static')
 )
 
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'cleveland-secret-key-2024')
@@ -1417,4 +1420,4 @@ def logout():
 # ═══════════════════════════════════════════
 
 if __name__ == "__main__":
-    app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
