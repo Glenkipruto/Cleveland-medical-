@@ -57,27 +57,27 @@
     </div>
     <nav class="sidebar-nav">
         <div class="nav-section-label">Main</div>
-        <a href="{{ url_for('admin_dashboard') }}" class="nav-item "><span class="nav-icon">⊞</span> Dashboard</a>
-        <a href="{{ url_for('manage_staff') }}" class="nav-item "><span class="nav-icon">👥</span> Staff Management</a>
+        <a href="{{ url_for('admin_dashboard') }}" class="nav-item"><span class="nav-icon">⊞</span> Dashboard</a>
+        <a href="{{ url_for('manage_staff') }}" class="nav-item"><span class="nav-icon">👥</span> Staff Management</a>
         <a href="{{ url_for('students') }}" class="nav-item active"><span class="nav-icon">🎓</span> Students</a>
         <div class="nav-section-label">Finance</div>
-        <a href="{{ url_for('tuition_payments') }}" class="nav-item "><span class="nav-icon">💰</span> Tuition & Payments</a>
-        <a href="{{ url_for('accounts_receivable') }}" class="nav-item "><span class="nav-icon">📥</span> Accounts Receivable</a>
-        <a href="{{ url_for('accounts_payable') }}" class="nav-item "><span class="nav-icon">📤</span> Accounts Payable</a>
-        <a href="{{ url_for('cash_and_bank') }}" class="nav-item "><span class="nav-icon">🏦</span> Cash & Bank</a>
-        <a href="{{ url_for('grants_donations') }}" class="nav-item "><span class="nav-icon">🎁</span> Grants & Donations</a>
-        <a href="{{ url_for('payroll') }}" class="nav-item "><span class="nav-icon">💼</span> Payroll</a>
+        <a href="{{ url_for('tuition') }}" class="nav-item"><span class="nav-icon">💰</span> Tuition & Payments</a>
+        <a href="{{ url_for('accounts_receivable') }}" class="nav-item"><span class="nav-icon">📥</span> Accounts Receivable</a>
+        <a href="{{ url_for('accounts_payable') }}" class="nav-item"><span class="nav-icon">📤</span> Accounts Payable</a>
+        <a href="{{ url_for('cash_bank') }}" class="nav-item"><span class="nav-icon">🏦</span> Cash & Bank</a>
+        <a href="{{ url_for('grants_donations') }}" class="nav-item"><span class="nav-icon">🎁</span> Grants & Donations</a>
+        <a href="{{ url_for('payroll') }}" class="nav-item"><span class="nav-icon">💼</span> Payroll</a>
         <div class="nav-section-label">Operations</div>
-        <a href="{{ url_for('inventory') }}" class="nav-item "><span class="nav-icon">📦</span> Inventory</a>
-        <a href="{{ url_for('reports') }}" class="nav-item "><span class="nav-icon">📊</span> Reports</a>
-        <a href="{{ url_for('settings') }}" class="nav-item "><span class="nav-icon">⚙️</span> Settings</a>
+        <a href="{{ url_for('inventory') }}" class="nav-item"><span class="nav-icon">📦</span> Inventory</a>
+        <a href="{{ url_for('reports') }}" class="nav-item"><span class="nav-icon">📊</span> Reports</a>
+        <a href="{{ url_for('settings') }}" class="nav-item"><span class="nav-icon">⚙️</span> Settings</a>
     </nav>
     <div class="sidebar-footer">
         <div class="user-info">
             <div class="user-avatar">{{ session.get('username','AD')[0] }}</div>
             <div>
                 <div class="user-name">{{ session.get('username','Administrator') }}</div>
-                <div class="user-role">{{ session.get('role','') | replace('_','  ') | title }}</div>
+                <div class="user-role">{{ session.get('role','') | replace('_',' ') | title }}</div>
             </div>
         </div>
         <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
@@ -139,7 +139,6 @@
 
             <div class="profile-divider"></div>
 
-            <!-- Fee Summary -->
             <div class="fee-grid">
                 <div class="fee-box">
                     <div class="fee-label">Total Fee</div>
@@ -155,7 +154,6 @@
                 </div>
             </div>
 
-            <!-- Progress Bar -->
             <div class="progress-wrap">
                 <div class="progress-label">
                     <span>Payment progress</span>
@@ -167,10 +165,9 @@
             </div>
         </div>
 
-        <!-- RIGHT: Details + Payment History -->
+        <!-- RIGHT -->
         <div class="right-col">
 
-            <!-- Personal Details -->
             <div class="profile-card">
                 <div class="section-title">📋 Full Details</div>
                 <div class="info-grid">
@@ -187,7 +184,6 @@
                 </div>
             </div>
 
-            <!-- Payment History -->
             <div class="profile-card">
                 <div class="section-title">💳 Payment History</div>
                 <table class="data-table">
@@ -221,16 +217,15 @@
 <div class="modal-overlay" id="payModal" onclick="if(event.target.id==='payModal') this.classList.remove('open')">
     <div class="modal">
         <div class="modal-title">💳 Record Payment — {{ student.full_name }}</div>
-        <form method="POST" action="{{ url_for('record_payment') }}">
-            <input type="hidden" name="student_id" value="{{ student.id }}">
+        <form method="POST" action="{{ url_for('add_tuition') }}">
+            <input type="hidden" name="student_id" value="{{ student.student_id }}">
+            <input type="hidden" name="student_name" value="{{ student.full_name }}">
+            <input type="hidden" name="category" value="Tuition Fee">
+            <input type="hidden" name="status" value="Paid">
             <div class="form-field">
                 <label>Amount (KSh)</label>
-                <input type="number" name="amount" placeholder="e.g. 50000" step="0.01" required max="{{ student.balance }}">
+                <input type="number" name="amount" placeholder="e.g. 50000" step="0.01" required>
                 <small style="color:var(--muted);font-size:0.78rem;">Balance due: KSh {{ "{:,.2f}".format(student.balance) }}</small>
-            </div>
-            <div class="form-field">
-                <label>Payment Date</label>
-                <input type="date" name="date" value="{{ today }}" required>
             </div>
             <div class="form-field">
                 <label>Payment Method</label>
@@ -243,14 +238,6 @@
                     <option value="Card">Card</option>
                 </select>
             </div>
-            <div class="form-field">
-                <label>Receipt No.</label>
-                <input type="text" name="receipt_no" id="receiptNo" readonly style="background:#f8fafc;">
-            </div>
-            <div class="form-field">
-                <label>Notes (optional)</label>
-                <input type="text" name="notes" placeholder="e.g. Second instalment">
-            </div>
             <div class="modal-actions">
                 <button type="button" class="btn-cancel" onclick="document.getElementById('payModal').classList.remove('open')">Cancel</button>
                 <button type="submit" class="btn-primary">💾 Save Payment</button>
@@ -260,17 +247,6 @@
 </div>
 
 <script>
-// Auto generate receipt number
-function genReceipt() {
-    const now = new Date();
-    return 'RCP-' + now.getFullYear() +
-        String(now.getMonth()+1).padStart(2,'0') +
-        String(now.getDate()).padStart(2,'0') + '-' +
-        String(Math.floor(Math.random()*9000)+1000);
-}
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('receiptNo').value = genReceipt();
-});
 document.getElementById('payModal').addEventListener('click', e => {
     if(e.target.id === 'payModal') e.target.classList.remove('open');
 });
