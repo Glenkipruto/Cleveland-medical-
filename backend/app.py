@@ -12,8 +12,8 @@ def eat_now():
 
 app = Flask(
     __name__,
-    template_folder=os.path.join(_base, '..', 'frontend', 'templates'),
-    static_folder=os.path.join(_base, '..', 'frontend', 'static')
+    template_folder="frontend/templates",
+static_folder="frontend/static"
 )
 
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'cleveland-secret-key-2024')
