@@ -1,12 +1,12 @@
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import date, datetime, timedelta
+import os
 
 
 def eat_now():
     from datetime import datetime as dt, timedelta
     return dt.utcnow() + timedelta(hours=3)
-
 
 
 app = Flask(
@@ -15,8 +15,13 @@ app = Flask(
     static_folder="../frontend/static"
 )
 
-app.config['SECRET_KEY'] = 'cleveland-secret-key-2024'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///cleveland.db'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'cleveland-secret-key-2024')
+
+# ── DATABASE: PostgreSQL on Railway, SQLite locally ──
+database_url = os.environ.get('DATABASE_URL', 'sqlite:///cleveland.db')
+if database_url.startswith('postgres://'):
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -122,8 +127,6 @@ class Examination(db.Model):
     semester    = db.Column(db.String(20),  default='Semester 1')
     status      = db.Column(db.String(20),  default='Scheduled')
 
-# ── FINANCE MODELS ──
-
 class FeePayment(db.Model):
     __tablename__ = 'fee_payments'
     id           = db.Column(db.Integer,     primary_key=True)
@@ -144,7 +147,6 @@ class FinanceExpense(db.Model):
     description = db.Column(db.String(200), nullable=True)
     status      = db.Column(db.String(20),  default='Approved')
     date        = db.Column(db.DateTime,    default=eat_now)
-                               
 
 class Receivable(db.Model):
     __tablename__ = 'receivables'
@@ -155,8 +157,7 @@ class Receivable(db.Model):
     amount       = db.Column(db.Float,       nullable=False)
     due_date     = db.Column(db.Date,        nullable=False)
     status       = db.Column(db.String(20),  default='Outstanding')
-    date_created = db.Column(db.DateTime,    default=eat_now
-                             )
+    date_created = db.Column(db.DateTime,    default=eat_now)
 
 class Payable(db.Model):
     __tablename__ = 'payables'
@@ -168,8 +169,7 @@ class Payable(db.Model):
     due_date     = db.Column(db.Date,        nullable=False)
     notes        = db.Column(db.String(200), nullable=True)
     status       = db.Column(db.String(20),  default='Pending')
-    date_created = db.Column(db.DateTime,    default=eat_now
-                             )
+    date_created = db.Column(db.DateTime,    default=eat_now)
 
 class CashBank(db.Model):
     __tablename__ = 'cash_bank'
@@ -180,8 +180,7 @@ class CashBank(db.Model):
     amount           = db.Column(db.Float,       nullable=False)
     reference        = db.Column(db.String(50),  nullable=True)
     date             = db.Column(db.Date,        nullable=False)
-    date_created     = db.Column(db.DateTime,    default=eat_now
-                                 )
+    date_created     = db.Column(db.DateTime,    default=eat_now)
 
 class GrantDonation(db.Model):
     __tablename__ = 'grants_donations'
@@ -218,8 +217,6 @@ class FinanceInventory(db.Model):
     min_stock    = db.Column(db.Integer,     default=5)
     condition    = db.Column(db.String(20),  default='Good')
     date_created = db.Column(db.DateTime,    default=eat_now)
-
-# ── MODELS KEPT FOR REPORTS COMPATIBILITY ──
 
 class Payment(db.Model):
     __tablename__ = 'payments'
@@ -326,26 +323,44 @@ class Message(db.Model):
 
 
 # ═══════════════════════════════════════════
-# CREATE TABLES + MIGRATE
+# CREATE TABLES + SETUP
 # ═══════════════════════════════════════════
 
 with app.app_context():
     db.create_all()
-    with db.engine.connect() as conn:
-        for col, coltype in [
-            ('full_name',      'VARCHAR(200)'),
-            ('department',     'VARCHAR(100)'),
-            ('job_title',      'VARCHAR(100)'),
-            ('phone',          'VARCHAR(20)'),
-            ('specialization', 'VARCHAR(200)'),
-            ('courses_taught', 'TEXT'),
-        ]:
-            try:
-                conn.execute(db.text(f'ALTER TABLE staff ADD COLUMN {col} {coltype}'))
-                conn.commit()
-                print(f'✅ Added column: {col}')
-            except:
-                print(f'⏭️ Skipped {col}: already exists')
+
+    # SQLite-only migration for extra staff columns
+    if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
+        with db.engine.connect() as conn:
+            for col, coltype in [
+                ('full_name',      'VARCHAR(200)'),
+                ('department',     'VARCHAR(100)'),
+                ('job_title',      'VARCHAR(100)'),
+                ('phone',          'VARCHAR(20)'),
+                ('specialization', 'VARCHAR(200)'),
+                ('courses_taught', 'TEXT'),
+            ]:
+                try:
+                    conn.execute(db.text(f'ALTER TABLE staff ADD COLUMN {col} {coltype}'))
+                    conn.commit()
+                    print(f'✅ Added column: {col}')
+                except:
+                    print(f'⏭️ Skipped {col}: already exists')
+
+    # Auto-create default admin if none exists
+    try:
+        existing_admin = Staff.query.filter_by(staff_id='CMC-ADMIN-01').first()
+        if not existing_admin:
+            db.session.add(Staff(
+                staff_id='CMC-ADMIN-01',
+                email='admin@cmc.edu',
+                password='password123',
+                role='admin'
+            ))
+            db.session.commit()
+            print('✅ Default admin created: CMC-ADMIN-01 / password123')
+    except:
+        pass
 
 
 # ═══════════════════════════════════════════
@@ -371,9 +386,9 @@ def staff_login():
             (Staff.staff_id == identifier) | (Staff.email == identifier)
         ).first()
         if staff and staff.password == password and staff.role == role:
-            session['role']      = staff.role
-            session['username']  = staff.staff_id
-            session['email']     = staff.email
+            session['role']       = staff.role
+            session['username']   = staff.staff_id
+            session['email']      = staff.email
             session['full_name']  = staff.full_name  or staff.staff_id
             session['job_title']  = staff.job_title  or 'Staff'
             session['department'] = staff.department or 'CMC'
@@ -387,10 +402,6 @@ def staff_login():
             flash('Invalid credentials or role mismatch. Please try again.')
     return render_template("staff_login.html")
 
-
-# ═══════════════════════════════════════════
-# STUDENT LOGIN
-# ═══════════════════════════════════════════
 
 @app.route('/student-login', methods=['GET', 'POST'])
 def student_login():
@@ -406,23 +417,15 @@ def admin_dashboard():
     if session.get('role') != 'admin':
         flash('Access denied.')
         return redirect(url_for('staff_login'))
-    total_students       = Student.query.count()
-    staff_count          = Staff.query.count()
-    students_owing       = Student.query.filter(Student.balance > 0).count()
-    total_courses        = Course.query.count()
-    total_announcements  = Announcement.query.count()
-    upcoming_exams       = Examination.query.filter_by(status='Scheduled').count()
-    recent_students      = Student.query.order_by(Student.id.desc()).limit(5).all()
-    latest_announcements = Announcement.query.order_by(Announcement.id.desc()).limit(3).all()
     return render_template('admin_dashboard.html',
-                           total_students=total_students,
-                           staff_count=staff_count,
-                           students_owing=students_owing,
-                           total_courses=total_courses,
-                           total_announcements=total_announcements,
-                           upcoming_exams=upcoming_exams,
-                           recent_students=recent_students,
-                           latest_announcements=latest_announcements)
+        total_students      = Student.query.count(),
+        staff_count         = Staff.query.count(),
+        students_owing      = Student.query.filter(Student.balance > 0).count(),
+        total_courses       = Course.query.count(),
+        total_announcements = Announcement.query.count(),
+        upcoming_exams      = Examination.query.filter_by(status='Scheduled').count(),
+        recent_students     = Student.query.order_by(Student.id.desc()).limit(5).all(),
+        latest_announcements= Announcement.query.order_by(Announcement.id.desc()).limit(3).all())
 
 
 # ═══════════════════════════════════════════
@@ -435,9 +438,8 @@ def manage_staff():
         flash('Access denied.')
         return redirect(url_for('staff_login'))
     return render_template('manage_staff.html',
-                           staff_list=Staff.query.order_by(Staff.id).all(),
-                           all_courses=Course.query.filter_by(status='Active').order_by(Course.name).all())
-
+        staff_list  = Staff.query.order_by(Staff.id).all(),
+        all_courses = Course.query.filter_by(status='Active').order_by(Course.name).all())
 
 @app.route('/manage-staff/add', methods=['POST'])
 def add_staff():
@@ -445,13 +447,11 @@ def add_staff():
         return redirect(url_for('staff_login'))
     staff_id = request.form.get('staff_id')
     email    = request.form.get('email')
-    existing = Staff.query.filter((Staff.staff_id == staff_id) | (Staff.email == email)).first()
-    if existing:
+    if Staff.query.filter((Staff.staff_id == staff_id) | (Staff.email == email)).first():
         flash('A staff member with that ID or email already exists.', 'error')
         return redirect(url_for('manage_staff'))
     db.session.add(Staff(
-        staff_id       = staff_id,
-        email          = email,
+        staff_id       = staff_id, email=email,
         password       = request.form.get('password'),
         role           = request.form.get('role'),
         full_name      = request.form.get('full_name', ''),
@@ -498,21 +498,15 @@ def add_student():
     tuition_fee = float(request.form.get('tuition_fee') or 0)
     amount_paid = float(request.form.get('amount_paid') or 0)
     db.session.add(Student(
-        student_id  = request.form.get('student_id'),
-        first_name  = first_name,
-        last_name   = last_name,
-        full_name   = f"{first_name} {last_name}",
-        dob         = request.form.get('dob'),
-        national_id = request.form.get('national_id'),
-        phone       = request.form.get('phone'),
-        email       = request.form.get('email'),
-        program     = request.form.get('program'),
-        year        = int(request.form.get('year') or 1),
-        intake_year = request.form.get('intake_year'),
-        tuition_fee = tuition_fee,
-        amount_paid = amount_paid,
-        balance     = tuition_fee - amount_paid,
-        status      = request.form.get('status', 'Active'),
+        student_id=request.form.get('student_id'),
+        first_name=first_name, last_name=last_name,
+        full_name=f"{first_name} {last_name}",
+        dob=request.form.get('dob'), national_id=request.form.get('national_id'),
+        phone=request.form.get('phone'), email=request.form.get('email'),
+        program=request.form.get('program'), year=int(request.form.get('year') or 1),
+        intake_year=request.form.get('intake_year'),
+        tuition_fee=tuition_fee, amount_paid=amount_paid,
+        balance=tuition_fee - amount_paid, status=request.form.get('status', 'Active'),
     ))
     db.session.commit()
     flash('Student added successfully.', 'success')
@@ -547,21 +541,17 @@ def announcements():
     if session.get('role') != 'admin':
         flash('Access denied.')
         return redirect(url_for('staff_login'))
-    all_announcements = Announcement.query.order_by(Announcement.id.desc()).all()
-    return render_template('announcements.html', announcements=all_announcements)
+    return render_template('announcements.html',
+        announcements=Announcement.query.order_by(Announcement.id.desc()).all())
 
 @app.route('/announcements/add', methods=['POST'])
 def add_announcement():
     if session.get('role') != 'admin':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     db.session.add(Announcement(
-        title     = request.form['title'],
-        message   = request.form['message'],
-        audience  = request.form['audience'],
-        priority  = request.form['priority'],
-        date      = request.form['date'],
-        posted_by = request.form['posted_by']
+        title=request.form['title'], message=request.form['message'],
+        audience=request.form['audience'], priority=request.form['priority'],
+        date=request.form['date'], posted_by=request.form['posted_by']
     ))
     db.session.commit()
     flash('Announcement posted successfully!', 'success')
@@ -570,7 +560,6 @@ def add_announcement():
 @app.route('/announcements/delete/<int:ann_id>', methods=['POST'])
 def delete_announcement(ann_id):
     if session.get('role') != 'admin':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     ann = Announcement.query.get_or_404(ann_id)
     db.session.delete(ann)
@@ -593,18 +582,15 @@ def courses():
 @app.route('/courses/add', methods=['POST'])
 def add_course():
     if session.get('role') != 'admin':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     db.session.add(Course(
-        code        = request.form['code'],
-        name        = request.form['name'],
-        department  = request.form['department'],
-        duration    = request.form['duration'],
-        tuition_fee = float(request.form['tuition_fee']),
-        capacity    = int(request.form['capacity']),
-        intake_year = int(request.form['intake_year']),
-        description = request.form.get('description', ''),
-        status      = request.form['status']
+        code=request.form['code'], name=request.form['name'],
+        department=request.form['department'], duration=request.form['duration'],
+        tuition_fee=float(request.form['tuition_fee']),
+        capacity=int(request.form['capacity']),
+        intake_year=int(request.form['intake_year']),
+        description=request.form.get('description', ''),
+        status=request.form['status']
     ))
     db.session.commit()
     flash('Course added successfully!', 'success')
@@ -613,7 +599,6 @@ def add_course():
 @app.route('/courses/delete/<int:course_id>', methods=['POST'])
 def delete_course(course_id):
     if session.get('role') != 'admin':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     course = Course.query.get_or_404(course_id)
     db.session.delete(course)
@@ -632,24 +617,19 @@ def timetable():
         flash('Access denied.')
         return redirect(url_for('staff_login'))
     return render_template('timetable.html',
-                           timetable=Timetable.query.order_by(Timetable.day, Timetable.start_time).all(),
-                           courses=Course.query.filter_by(status='Active').all())
+        timetable=Timetable.query.order_by(Timetable.day, Timetable.start_time).all(),
+        courses=Course.query.filter_by(status='Active').all())
 
 @app.route('/timetable/add', methods=['POST'])
 def add_timetable():
     if session.get('role') != 'admin':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     db.session.add(Timetable(
-        program    = request.form['program'],
-        subject    = request.form['subject'],
-        lecturer   = request.form['lecturer'],
-        day        = request.form['day'],
-        start_time = request.form['start_time'],
-        end_time   = request.form['end_time'],
-        room       = request.form['room'],
-        year       = request.form['year'],
-        semester   = request.form['semester']
+        program=request.form['program'], subject=request.form['subject'],
+        lecturer=request.form['lecturer'], day=request.form['day'],
+        start_time=request.form['start_time'], end_time=request.form['end_time'],
+        room=request.form['room'], year=request.form['year'],
+        semester=request.form['semester']
     ))
     db.session.commit()
     flash('Schedule added successfully!', 'success')
@@ -658,7 +638,6 @@ def add_timetable():
 @app.route('/timetable/delete/<int:tt_id>', methods=['POST'])
 def delete_timetable(tt_id):
     if session.get('role') != 'admin':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     tt = Timetable.query.get_or_404(tt_id)
     db.session.delete(tt)
@@ -677,31 +656,25 @@ def examinations():
         flash('Access denied.')
         return redirect(url_for('staff_login'))
     return render_template('examinations.html',
-                           exams=Examination.query.order_by(Examination.exam_date).all(),
-                           courses=Course.query.filter_by(status='Active').all(),
-                           total_exams=Examination.query.count(),
-                           scheduled=Examination.query.filter_by(status='Scheduled').count(),
-                           completed=Examination.query.filter_by(status='Completed').count(),
-                           postponed=Examination.query.filter_by(status='Postponed').count())
+        exams=Examination.query.order_by(Examination.exam_date).all(),
+        courses=Course.query.filter_by(status='Active').all(),
+        total_exams=Examination.query.count(),
+        scheduled=Examination.query.filter_by(status='Scheduled').count(),
+        completed=Examination.query.filter_by(status='Completed').count(),
+        postponed=Examination.query.filter_by(status='Postponed').count())
 
 @app.route('/examinations/add', methods=['POST'])
 def add_examination():
     if session.get('role') != 'admin':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     db.session.add(Examination(
-        program     = request.form['program'],
-        subject     = request.form['subject'],
-        exam_type   = request.form['exam_type'],
-        exam_date   = request.form['exam_date'],
-        start_time  = request.form['start_time'],
-        end_time    = request.form['end_time'],
-        venue       = request.form['venue'],
-        year        = request.form['year'],
-        invigilator = request.form.get('invigilator', ''),
-        total_marks = int(request.form.get('total_marks', 100)),
-        semester    = request.form['semester'],
-        status      = request.form['status']
+        program=request.form['program'], subject=request.form['subject'],
+        exam_type=request.form['exam_type'], exam_date=request.form['exam_date'],
+        start_time=request.form['start_time'], end_time=request.form['end_time'],
+        venue=request.form['venue'], year=request.form['year'],
+        invigilator=request.form.get('invigilator', ''),
+        total_marks=int(request.form.get('total_marks', 100)),
+        semester=request.form['semester'], status=request.form['status']
     ))
     db.session.commit()
     flash('Exam scheduled successfully!', 'success')
@@ -710,7 +683,6 @@ def add_examination():
 @app.route('/examinations/delete/<int:exam_id>', methods=['POST'])
 def delete_examination(exam_id):
     if session.get('role') != 'admin':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     exam = Examination.query.get_or_404(exam_id)
     db.session.delete(exam)
@@ -720,7 +692,7 @@ def delete_examination(exam_id):
 
 
 # ═══════════════════════════════════════════
-# FINANCE OVERVIEW (Admin read-only)
+# FINANCE OVERVIEW (Admin)
 # ═══════════════════════════════════════════
 
 @app.route('/finance-overview')
@@ -729,48 +701,40 @@ def finance_overview():
         flash('Access denied.')
         return redirect(url_for('staff_login'))
     from sqlalchemy import func
-    tuition_collected = db.session.query(func.sum(FeePayment.amount)).filter_by(status='Paid').scalar() or 0
-    tuition_pending   = db.session.query(func.sum(FeePayment.amount)).filter_by(status='Pending').scalar() or 0
-    tuition_overdue   = 0
-    tuition_records   = FeePayment.query.count()
-    grants_total      = db.session.query(func.sum(GrantDonation.amount)).filter_by(type='Grant').scalar() or 0
-    donations_total   = db.session.query(func.sum(GrantDonation.amount)).filter_by(type='Donation').scalar() or 0
-    payroll_list      = FinancePayroll.query.all()
-    payroll_staff     = FinancePayroll.query.count()
-    payroll_total     = sum(p.basic_salary + p.allowances for p in payroll_list)
-    payroll_paid      = sum(p.basic_salary + p.allowances for p in payroll_list if p.status == 'Paid')
-    payroll_pending   = sum(p.basic_salary + p.allowances for p in payroll_list if p.status == 'Pending')
-    cash_deposits     = db.session.query(func.sum(CashBank.amount)).filter_by(transaction_type='Deposit').scalar() or 0
-    cash_withdrawals  = db.session.query(func.sum(CashBank.amount)).filter_by(transaction_type='Withdrawal').scalar() or 0
-    payable_paid      = db.session.query(func.sum(Payable.amount)).filter_by(status='Paid').scalar() or 0
-    payable_pending   = db.session.query(func.sum(Payable.amount)).filter_by(status='Pending').scalar() or 0
-    payable_overdue   = 0
-    payable_records   = Payable.query.count()
+    tuition_collected   = db.session.query(func.sum(FeePayment.amount)).filter_by(status='Paid').scalar() or 0
+    tuition_pending     = db.session.query(func.sum(FeePayment.amount)).filter_by(status='Pending').scalar() or 0
+    grants_total        = db.session.query(func.sum(GrantDonation.amount)).filter_by(type='Grant').scalar() or 0
+    donations_total     = db.session.query(func.sum(GrantDonation.amount)).filter_by(type='Donation').scalar() or 0
+    payroll_list        = FinancePayroll.query.all()
+    payroll_total       = sum(p.basic_salary + p.allowances for p in payroll_list)
+    payroll_paid        = sum(p.basic_salary + p.allowances for p in payroll_list if p.status == 'Paid')
+    payroll_pending     = sum(p.basic_salary + p.allowances for p in payroll_list if p.status == 'Pending')
+    cash_deposits       = db.session.query(func.sum(CashBank.amount)).filter_by(transaction_type='Deposit').scalar() or 0
+    cash_withdrawals    = db.session.query(func.sum(CashBank.amount)).filter_by(transaction_type='Withdrawal').scalar() or 0
+    payable_paid        = db.session.query(func.sum(Payable.amount)).filter_by(status='Paid').scalar() or 0
+    payable_pending     = db.session.query(func.sum(Payable.amount)).filter_by(status='Pending').scalar() or 0
     inventory_list      = FinanceInventory.query.all()
-    inventory_items     = FinanceInventory.query.count()
     inventory_value     = sum(i.quantity * i.unit_price for i in inventory_list)
     inventory_low_stock = sum(1 for i in inventory_list if i.quantity <= i.min_stock)
-    total_income      = tuition_collected + grants_total + donations_total
-    total_expenses    = payable_paid + payroll_total
-    net_balance       = total_income - total_expenses
-    outstanding_fees  = tuition_pending
+    total_income        = tuition_collected + grants_total + donations_total
+    total_expenses      = payable_paid + payroll_total
     return render_template('finance_overview.html',
-                           total_income=total_income, total_expenses=total_expenses,
-                           net_balance=net_balance, outstanding_fees=outstanding_fees,
-                           tuition_collected=tuition_collected, tuition_pending=tuition_pending,
-                           tuition_overdue=tuition_overdue, tuition_records=tuition_records,
-                           grants_total=grants_total, donations_total=donations_total,
-                           payroll_staff=payroll_staff, payroll_total=payroll_total,
-                           payroll_paid=payroll_paid, payroll_pending=payroll_pending,
-                           cash_deposits=cash_deposits, cash_withdrawals=cash_withdrawals,
-                           payable_paid=payable_paid, payable_pending=payable_pending,
-                           payable_overdue=payable_overdue, payable_records=payable_records,
-                           inventory_items=inventory_items, inventory_value=inventory_value,
-                           inventory_low_stock=inventory_low_stock)
+        total_income=total_income, total_expenses=total_expenses,
+        net_balance=total_income - total_expenses, outstanding_fees=tuition_pending,
+        tuition_collected=tuition_collected, tuition_pending=tuition_pending,
+        tuition_overdue=0, tuition_records=FeePayment.query.count(),
+        grants_total=grants_total, donations_total=donations_total,
+        payroll_staff=FinancePayroll.query.count(), payroll_total=payroll_total,
+        payroll_paid=payroll_paid, payroll_pending=payroll_pending,
+        cash_deposits=cash_deposits, cash_withdrawals=cash_withdrawals,
+        payable_paid=payable_paid, payable_pending=payable_pending,
+        payable_overdue=0, payable_records=Payable.query.count(),
+        inventory_items=FinanceInventory.query.count(),
+        inventory_value=inventory_value, inventory_low_stock=inventory_low_stock)
 
 
 # ═══════════════════════════════════════════
-# ADMIN REPORTS
+# REPORTS
 # ═══════════════════════════════════════════
 
 @app.route('/reports')
@@ -779,44 +743,34 @@ def reports():
         flash('Access denied.')
         return redirect(url_for('staff_login'))
     from sqlalchemy import func
-    total_students     = Student.query.count()
-    active_students    = Student.query.filter_by(status='Active').count()
-    deferred_students  = Student.query.filter_by(status='Deferred').count()
-    graduated_students = Student.query.filter_by(status='Graduated').count()
-    suspended_students = Student.query.filter_by(status='Suspended').count()
-    programs           = db.session.query(Student.program, func.count(Student.id)).group_by(Student.program).all()
-    total_staff        = Staff.query.count()
-    admin_count        = Staff.query.filter_by(role='admin').count()
-    finance_count      = Staff.query.filter_by(role='finance').count()
-    frontoffice_count  = Staff.query.filter_by(role='front_office').count()
-    total_courses      = Course.query.count()
-    active_courses     = Course.query.filter_by(status='Active').count()
-    total_exams        = Examination.query.count()
-    scheduled_exams    = Examination.query.filter_by(status='Scheduled').count()
-    completed_exams    = Examination.query.filter_by(status='Completed').count()
-    postponed_exams    = Examination.query.filter_by(status='Postponed').count()
-    total_announcements= Announcement.query.count()
     tuition_collected  = db.session.query(func.sum(FeePayment.amount)).filter_by(status='Paid').scalar() or 0
-    total_outstanding  = db.session.query(func.sum(Student.balance)).filter(Student.balance > 0).scalar() or 0
     grants_total       = db.session.query(func.sum(GrantDonation.amount)).filter_by(type='Grant').scalar() or 0
     donations_total    = db.session.query(func.sum(GrantDonation.amount)).filter_by(type='Donation').scalar() or 0
     total_income       = tuition_collected + grants_total + donations_total
     total_expenses     = db.session.query(func.sum(Payable.amount)).filter_by(status='Paid').scalar() or 0
-    net_balance        = total_income - total_expenses
-    recent_students    = Student.query.order_by(Student.id.desc()).limit(10).all()
     return render_template('reports.html',
-        total_students=total_students, active_students=active_students,
-        deferred_students=deferred_students, graduated_students=graduated_students,
-        suspended_students=suspended_students, programs=programs,
-        total_staff=total_staff, admin_count=admin_count,
-        finance_count=finance_count, frontoffice_count=frontoffice_count,
-        total_courses=total_courses, active_courses=active_courses,
-        total_exams=total_exams, scheduled_exams=scheduled_exams,
-        completed_exams=completed_exams, postponed_exams=postponed_exams,
-        total_announcements=total_announcements,
-        tuition_collected=tuition_collected, total_outstanding=total_outstanding,
+        total_students=Student.query.count(),
+        active_students=Student.query.filter_by(status='Active').count(),
+        deferred_students=Student.query.filter_by(status='Deferred').count(),
+        graduated_students=Student.query.filter_by(status='Graduated').count(),
+        suspended_students=Student.query.filter_by(status='Suspended').count(),
+        programs=db.session.query(Student.program, func.count(Student.id)).group_by(Student.program).all(),
+        total_staff=Staff.query.count(),
+        admin_count=Staff.query.filter_by(role='admin').count(),
+        finance_count=Staff.query.filter_by(role='finance').count(),
+        frontoffice_count=Staff.query.filter_by(role='front_office').count(),
+        total_courses=Course.query.count(),
+        active_courses=Course.query.filter_by(status='Active').count(),
+        total_exams=Examination.query.count(),
+        scheduled_exams=Examination.query.filter_by(status='Scheduled').count(),
+        completed_exams=Examination.query.filter_by(status='Completed').count(),
+        postponed_exams=Examination.query.filter_by(status='Postponed').count(),
+        total_announcements=Announcement.query.count(),
+        tuition_collected=tuition_collected,
+        total_outstanding=db.session.query(func.sum(Student.balance)).filter(Student.balance > 0).scalar() or 0,
         total_income=total_income, total_expenses=total_expenses,
-        net_balance=net_balance, recent_students=recent_students)
+        net_balance=total_income - total_expenses,
+        recent_students=Student.query.order_by(Student.id.desc()).limit(10).all())
 
 
 # ═══════════════════════════════════════════
@@ -829,8 +783,7 @@ def settings():
         flash('Access denied.')
         return redirect(url_for('staff_login'))
     return render_template('settings.html',
-        staff_count=Staff.query.count(),
-        student_count=Student.query.count())
+        staff_count=Staff.query.count(), student_count=Student.query.count())
 
 @app.route('/settings/update-profile', methods=['POST'])
 def update_profile():
@@ -839,8 +792,7 @@ def update_profile():
     staff = Staff.query.filter_by(staff_id=session.get('username')).first()
     if staff:
         new_email = request.form.get('email')
-        existing  = Staff.query.filter(Staff.email == new_email, Staff.id != staff.id).first()
-        if existing:
+        if Staff.query.filter(Staff.email == new_email, Staff.id != staff.id).first():
             flash('That email is already in use.', 'error')
         else:
             staff.email = new_email
@@ -902,44 +854,33 @@ def finance_dashboard():
     total_income   = db.session.query(db.func.sum(FeePayment.amount)).filter_by(status='Paid').scalar() or 0
     total_expenses = db.session.query(db.func.sum(FinanceExpense.amount)).scalar() or 0
     pending_fees   = db.session.query(db.func.sum(FeePayment.amount)).filter_by(status='Pending').scalar() or 0
-    net_balance    = total_income - total_expenses
     recent_fees    = FeePayment.query.order_by(FeePayment.date.desc()).limit(5).all()
     return render_template('finance/dashboard.html',
-                           total_income=total_income,
-                           total_expenses=total_expenses,
-                           pending_fees=pending_fees,
-                           net_balance=net_balance,
-                           recent_fees=recent_fees)
+        total_income=total_income, total_expenses=total_expenses,
+        pending_fees=pending_fees, net_balance=total_income - total_expenses,
+        recent_fees=recent_fees)
 
 @app.route('/api/chart-data')
 def chart_data():
     from sqlalchemy import extract
     import calendar
-    months_data  = []
-    income_data  = []
-    expense_data = []
-    for month_num in range(1, 7):
-        months_data.append(calendar.month_abbr[month_num])
+    months_data, income_data, expense_data = [], [], []
+    for m in range(1, 7):
+        months_data.append(calendar.month_abbr[m])
         tuition = db.session.query(db.func.sum(FeePayment.amount)).filter(
-            FeePayment.status == 'Paid',
-            extract('month', FeePayment.date) == month_num,
-            extract('year',  FeePayment.date) == 2026
-        ).scalar() or 0
+            FeePayment.status=='Paid', extract('month', FeePayment.date)==m,
+            extract('year', FeePayment.date)==2026).scalar() or 0
         grants = db.session.query(db.func.sum(GrantDonation.amount)).filter(
-            GrantDonation.status == 'Received',
-            extract('month', GrantDonation.date_received) == month_num,
-            extract('year',  GrantDonation.date_received) == 2026
-        ).scalar() or 0
+            GrantDonation.status=='Received',
+            extract('month', GrantDonation.date_received)==m,
+            extract('year', GrantDonation.date_received)==2026).scalar() or 0
         income_data.append(tuition + grants)
         expenses = db.session.query(db.func.sum(Payable.amount)).filter(
-            Payable.status == 'Paid',
-            extract('month', Payable.date_created) == month_num,
-            extract('year',  Payable.date_created) == 2026
-        ).scalar() or 0
+            Payable.status=='Paid', extract('month', Payable.date_created)==m,
+            extract('year', Payable.date_created)==2026).scalar() or 0
         expense_data.append(expenses)
     return jsonify({'months': months_data, 'income': income_data, 'expenses': expense_data})
 
-# Tuition
 @app.route('/finance/tuition')
 def tuition():
     if session.get('role') != 'finance':
@@ -949,15 +890,14 @@ def tuition():
     total_collected = db.session.query(db.func.sum(FeePayment.amount)).filter_by(status='Paid').scalar() or 0
     total_pending   = db.session.query(db.func.sum(FeePayment.amount)).filter_by(status='Pending').scalar() or 0
     total_overdue   = db.session.query(db.func.sum(FeePayment.amount)).filter_by(status='Overdue').scalar() or 0
-    total_records   = FeePayment.query.count()
     return render_template('finance/tuition.html',
-                           payments=payments, total_collected=total_collected,
-                           total_pending=total_pending, total_overdue=total_overdue,
-                           total_records=total_records)
+        payments=payments, total_collected=total_collected,
+        total_pending=total_pending, total_overdue=total_overdue,
+        total_records=FeePayment.query.count())
 
 @app.route('/finance/tuition/add', methods=['POST'])
 def add_tuition():
-    if session.get('role') != 'finance':
+    if session.get('role') not in ['finance', 'admin', 'front_office']:
         flash('Access denied.')
         return redirect(url_for('staff_login'))
     db.session.add(FeePayment(
@@ -966,16 +906,18 @@ def add_tuition():
         category     = request.form['category'],
         amount       = float(request.form['amount']),
         method       = request.form['method'],
-        status       = request.form['status']
+        status       = request.form.get('status', 'Paid')
     ))
     db.session.commit()
     flash('Payment recorded successfully!', 'success')
+    referrer = request.referrer or ''
+    if 'students' in referrer:
+        return redirect(referrer)
     return redirect(url_for('tuition'))
 
 @app.route('/finance/tuition/delete/<int:fee_id>', methods=['POST'])
 def delete_tuition(fee_id):
     if session.get('role') != 'finance':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     fee = FeePayment.query.get_or_404(fee_id)
     db.session.delete(fee)
@@ -983,34 +925,27 @@ def delete_tuition(fee_id):
     flash('Record deleted.', 'success')
     return redirect(url_for('tuition'))
 
-# Accounts Receivable
 @app.route('/finance/accounts-receivable')
 def accounts_receivable():
     if session.get('role') != 'finance':
         flash('Access denied.')
         return redirect(url_for('staff_login'))
-    receivables       = Receivable.query.order_by(Receivable.date_created.desc()).all()
-    total_received    = db.session.query(db.func.sum(Receivable.amount)).filter_by(status='Received').scalar() or 0
-    total_outstanding = db.session.query(db.func.sum(Receivable.amount)).filter_by(status='Outstanding').scalar() or 0
-    total_overdue     = db.session.query(db.func.sum(Receivable.amount)).filter_by(status='Overdue').scalar() or 0
-    total_records     = Receivable.query.count()
+    receivables = Receivable.query.order_by(Receivable.date_created.desc()).all()
     return render_template('finance/accounts_receivable.html',
-                           receivables=receivables, total_received=total_received,
-                           total_outstanding=total_outstanding, total_overdue=total_overdue,
-                           total_records=total_records)
+        receivables=receivables,
+        total_received=db.session.query(db.func.sum(Receivable.amount)).filter_by(status='Received').scalar() or 0,
+        total_outstanding=db.session.query(db.func.sum(Receivable.amount)).filter_by(status='Outstanding').scalar() or 0,
+        total_overdue=db.session.query(db.func.sum(Receivable.amount)).filter_by(status='Overdue').scalar() or 0,
+        total_records=Receivable.query.count())
 
 @app.route('/finance/accounts-receivable/add', methods=['POST'])
 def add_receivable():
     if session.get('role') != 'finance':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     db.session.add(Receivable(
-        debtor_name = request.form['debtor_name'],
-        reference   = request.form['reference'],
-        category    = request.form['category'],
-        amount      = float(request.form['amount']),
-        due_date    = date.fromisoformat(request.form['due_date']),
-        status      = request.form['status']
+        debtor_name=request.form['debtor_name'], reference=request.form['reference'],
+        category=request.form['category'], amount=float(request.form['amount']),
+        due_date=date.fromisoformat(request.form['due_date']), status=request.form['status']
     ))
     db.session.commit()
     flash('Invoice added successfully!', 'success')
@@ -1019,7 +954,6 @@ def add_receivable():
 @app.route('/finance/accounts-receivable/delete/<int:item_id>', methods=['POST'])
 def delete_receivable(item_id):
     if session.get('role') != 'finance':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     item = Receivable.query.get_or_404(item_id)
     db.session.delete(item)
@@ -1027,35 +961,28 @@ def delete_receivable(item_id):
     flash('Record deleted.', 'success')
     return redirect(url_for('accounts_receivable'))
 
-# Accounts Payable
 @app.route('/finance/accounts-payable')
 def accounts_payable():
     if session.get('role') != 'finance':
         flash('Access denied.')
         return redirect(url_for('staff_login'))
-    payables      = Payable.query.order_by(Payable.date_created.desc()).all()
-    total_paid    = db.session.query(db.func.sum(Payable.amount)).filter_by(status='Paid').scalar() or 0
-    total_pending = db.session.query(db.func.sum(Payable.amount)).filter_by(status='Pending').scalar() or 0
-    total_overdue = db.session.query(db.func.sum(Payable.amount)).filter_by(status='Overdue').scalar() or 0
-    total_records = Payable.query.count()
+    payables = Payable.query.order_by(Payable.date_created.desc()).all()
     return render_template('finance/accounts_payable.html',
-                           payables=payables, total_paid=total_paid,
-                           total_pending=total_pending, total_overdue=total_overdue,
-                           total_records=total_records)
+        payables=payables,
+        total_paid=db.session.query(db.func.sum(Payable.amount)).filter_by(status='Paid').scalar() or 0,
+        total_pending=db.session.query(db.func.sum(Payable.amount)).filter_by(status='Pending').scalar() or 0,
+        total_overdue=db.session.query(db.func.sum(Payable.amount)).filter_by(status='Overdue').scalar() or 0,
+        total_records=Payable.query.count())
 
 @app.route('/finance/accounts-payable/add', methods=['POST'])
 def add_payable():
     if session.get('role') != 'finance':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     db.session.add(Payable(
-        vendor_name = request.form['vendor_name'],
-        reference   = request.form['reference'],
-        category    = request.form['category'],
-        amount      = float(request.form['amount']),
-        due_date    = date.fromisoformat(request.form['due_date']),
-        notes       = request.form.get('notes', ''),
-        status      = request.form['status']
+        vendor_name=request.form['vendor_name'], reference=request.form['reference'],
+        category=request.form['category'], amount=float(request.form['amount']),
+        due_date=date.fromisoformat(request.form['due_date']),
+        notes=request.form.get('notes', ''), status=request.form['status']
     ))
     db.session.commit()
     flash('Bill added successfully!', 'success')
@@ -1064,7 +991,6 @@ def add_payable():
 @app.route('/finance/accounts-payable/delete/<int:item_id>', methods=['POST'])
 def delete_payable(item_id):
     if session.get('role') != 'finance':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     item = Payable.query.get_or_404(item_id)
     db.session.delete(item)
@@ -1072,34 +998,30 @@ def delete_payable(item_id):
     flash('Bill deleted.', 'success')
     return redirect(url_for('accounts_payable'))
 
-# Cash & Bank
 @app.route('/finance/cash-bank')
 def cash_bank():
     if session.get('role') != 'finance':
         flash('Access denied.')
         return redirect(url_for('staff_login'))
-    transactions      = CashBank.query.order_by(CashBank.date.desc()).all()
-    total_deposits    = db.session.query(db.func.sum(CashBank.amount)).filter_by(transaction_type='Deposit').scalar() or 0
-    total_withdrawals = db.session.query(db.func.sum(CashBank.amount)).filter_by(transaction_type='Withdrawal').scalar() or 0
-    cash_on_hand      = db.session.query(db.func.sum(CashBank.amount)).filter_by(account='Cash', transaction_type='Deposit').scalar() or 0
-    bank_balance      = total_deposits - total_withdrawals
+    transactions   = CashBank.query.order_by(CashBank.date.desc()).all()
+    total_deposits = db.session.query(db.func.sum(CashBank.amount)).filter_by(transaction_type='Deposit').scalar() or 0
+    total_wds      = db.session.query(db.func.sum(CashBank.amount)).filter_by(transaction_type='Withdrawal').scalar() or 0
+    cash_on_hand   = db.session.query(db.func.sum(CashBank.amount)).filter_by(account='Cash', transaction_type='Deposit').scalar() or 0
     return render_template('finance/cash_bank.html',
-                           transactions=transactions, total_deposits=total_deposits,
-                           total_withdrawals=total_withdrawals, cash_on_hand=cash_on_hand,
-                           bank_balance=bank_balance)
+        transactions=transactions, total_deposits=total_deposits,
+        total_withdrawals=total_wds, cash_on_hand=cash_on_hand,
+        bank_balance=total_deposits - total_wds)
 
 @app.route('/finance/cash-bank/add', methods=['POST'])
 def add_cash_bank():
     if session.get('role') != 'finance':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     db.session.add(CashBank(
-        transaction_type = request.form['transaction_type'],
-        account          = request.form['account'],
-        description      = request.form['description'],
-        amount           = float(request.form['amount']),
-        reference        = request.form.get('reference', ''),
-        date             = date.fromisoformat(request.form['date'])
+        transaction_type=request.form['transaction_type'],
+        account=request.form['account'], description=request.form['description'],
+        amount=float(request.form['amount']),
+        reference=request.form.get('reference', ''),
+        date=date.fromisoformat(request.form['date'])
     ))
     db.session.commit()
     flash('Transaction recorded successfully!', 'success')
@@ -1108,7 +1030,6 @@ def add_cash_bank():
 @app.route('/finance/cash-bank/delete/<int:item_id>', methods=['POST'])
 def delete_cash_bank(item_id):
     if session.get('role') != 'finance':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     item = CashBank.query.get_or_404(item_id)
     db.session.delete(item)
@@ -1116,35 +1037,28 @@ def delete_cash_bank(item_id):
     flash('Transaction deleted.', 'success')
     return redirect(url_for('cash_bank'))
 
-# Grants & Donations
 @app.route('/finance/grants-donations')
 def grants_donations():
     if session.get('role') != 'finance':
         flash('Access denied.')
         return redirect(url_for('staff_login'))
-    records         = GrantDonation.query.order_by(GrantDonation.date_created.desc()).all()
-    total_grants    = db.session.query(db.func.sum(GrantDonation.amount)).filter_by(type='Grant').scalar() or 0
-    total_donations = db.session.query(db.func.sum(GrantDonation.amount)).filter_by(type='Donation').scalar() or 0
-    total_pending   = db.session.query(db.func.sum(GrantDonation.amount)).filter_by(status='Pending').scalar() or 0
-    total_records   = GrantDonation.query.count()
+    records = GrantDonation.query.order_by(GrantDonation.date_created.desc()).all()
     return render_template('finance/grants_donations.html',
-                           records=records, total_grants=total_grants,
-                           total_donations=total_donations, total_pending=total_pending,
-                           total_records=total_records)
+        records=records,
+        total_grants=db.session.query(db.func.sum(GrantDonation.amount)).filter_by(type='Grant').scalar() or 0,
+        total_donations=db.session.query(db.func.sum(GrantDonation.amount)).filter_by(type='Donation').scalar() or 0,
+        total_pending=db.session.query(db.func.sum(GrantDonation.amount)).filter_by(status='Pending').scalar() or 0,
+        total_records=GrantDonation.query.count())
 
 @app.route('/finance/grants-donations/add', methods=['POST'])
 def add_grant_donation():
     if session.get('role') != 'finance':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     db.session.add(GrantDonation(
-        donor_name    = request.form['donor_name'],
-        type          = request.form['type'],
-        purpose       = request.form['purpose'],
-        amount        = float(request.form['amount']),
-        date_received = date.fromisoformat(request.form['date_received']),
-        notes         = request.form.get('notes', ''),
-        status        = request.form['status']
+        donor_name=request.form['donor_name'], type=request.form['type'],
+        purpose=request.form['purpose'], amount=float(request.form['amount']),
+        date_received=date.fromisoformat(request.form['date_received']),
+        notes=request.form.get('notes', ''), status=request.form['status']
     ))
     db.session.commit()
     flash('Record added successfully!', 'success')
@@ -1153,7 +1067,6 @@ def add_grant_donation():
 @app.route('/finance/grants-donations/delete/<int:item_id>', methods=['POST'])
 def delete_grant_donation(item_id):
     if session.get('role') != 'finance':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     item = GrantDonation.query.get_or_404(item_id)
     db.session.delete(item)
@@ -1161,35 +1074,29 @@ def delete_grant_donation(item_id):
     flash('Record deleted.', 'success')
     return redirect(url_for('grants_donations'))
 
-# Payroll
 @app.route('/finance/payroll')
 def payroll():
     if session.get('role') != 'finance':
         flash('Access denied.')
         return redirect(url_for('staff_login'))
-    payroll_list  = FinancePayroll.query.order_by(FinancePayroll.date_created.desc()).all()
-    total_net_pay = sum(s.basic_salary + s.allowances for s in payroll_list)
-    total_paid    = sum(s.basic_salary + s.allowances for s in payroll_list if s.status == 'Paid')
-    total_pending = sum(s.basic_salary + s.allowances for s in payroll_list if s.status == 'Pending')
-    total_staff   = FinancePayroll.query.count()
+    payroll_list = FinancePayroll.query.order_by(FinancePayroll.date_created.desc()).all()
     return render_template('finance/payroll.html',
-                           payroll=payroll_list, total_net_pay=total_net_pay,
-                           total_paid=total_paid, total_pending=total_pending,
-                           total_staff=total_staff)
+        payroll=payroll_list,
+        total_net_pay=sum(s.basic_salary + s.allowances for s in payroll_list),
+        total_paid=sum(s.basic_salary + s.allowances for s in payroll_list if s.status == 'Paid'),
+        total_pending=sum(s.basic_salary + s.allowances for s in payroll_list if s.status == 'Pending'),
+        total_staff=FinancePayroll.query.count())
 
 @app.route('/finance/payroll/add', methods=['POST'])
 def add_payroll():
     if session.get('role') != 'finance':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     db.session.add(FinancePayroll(
-        staff_id     = request.form['staff_id'],
-        name         = request.form['name'],
-        department   = request.form['department'],
-        role         = request.form['role'],
-        basic_salary = float(request.form['basic_salary']),
-        allowances   = float(request.form.get('allowances', 0)),
-        status       = request.form['status']
+        staff_id=request.form['staff_id'], name=request.form['name'],
+        department=request.form['department'], role=request.form['role'],
+        basic_salary=float(request.form['basic_salary']),
+        allowances=float(request.form.get('allowances', 0)),
+        status=request.form['status']
     ))
     db.session.commit()
     flash('Staff added to payroll successfully!', 'success')
@@ -1198,7 +1105,6 @@ def add_payroll():
 @app.route('/finance/payroll/delete/<int:staff_id>', methods=['POST'])
 def delete_payroll(staff_id):
     if session.get('role') != 'finance':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     staff = FinancePayroll.query.get_or_404(staff_id)
     db.session.delete(staff)
@@ -1206,35 +1112,28 @@ def delete_payroll(staff_id):
     flash('Staff removed from payroll.', 'success')
     return redirect(url_for('payroll'))
 
-# Inventory
 @app.route('/finance/inventory')
 def inventory():
     if session.get('role') != 'finance':
         flash('Access denied.')
         return redirect(url_for('staff_login'))
-    items            = FinanceInventory.query.order_by(FinanceInventory.date_created.desc()).all()
-    total_items      = FinanceInventory.query.count()
-    total_value      = sum(i.quantity * i.unit_price for i in items)
-    low_stock        = sum(1 for i in items if i.quantity <= i.min_stock)
-    total_categories = db.session.query(FinanceInventory.category).distinct().count()
+    items = FinanceInventory.query.order_by(FinanceInventory.date_created.desc()).all()
     return render_template('finance/inventory.html',
-                           items=items, total_items=total_items,
-                           total_value=total_value, low_stock=low_stock,
-                           total_categories=total_categories)
+        items=items, total_items=FinanceInventory.query.count(),
+        total_value=sum(i.quantity * i.unit_price for i in items),
+        low_stock=sum(1 for i in items if i.quantity <= i.min_stock),
+        total_categories=db.session.query(FinanceInventory.category).distinct().count())
 
 @app.route('/finance/inventory/add', methods=['POST'])
 def add_inventory():
     if session.get('role') != 'finance':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     db.session.add(FinanceInventory(
-        item_name  = request.form['item_name'],
-        category   = request.form['category'],
-        department = request.form['department'],
-        quantity   = int(request.form['quantity']),
-        unit_price = float(request.form['unit_price']),
-        min_stock  = int(request.form.get('min_stock', 5)),
-        condition  = request.form['condition']
+        item_name=request.form['item_name'], category=request.form['category'],
+        department=request.form['department'], quantity=int(request.form['quantity']),
+        unit_price=float(request.form['unit_price']),
+        min_stock=int(request.form.get('min_stock', 5)),
+        condition=request.form['condition']
     ))
     db.session.commit()
     flash('Item added successfully!', 'success')
@@ -1243,7 +1142,6 @@ def add_inventory():
 @app.route('/finance/inventory/delete/<int:item_id>', methods=['POST'])
 def delete_inventory(item_id):
     if session.get('role') != 'finance':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     item = FinanceInventory.query.get_or_404(item_id)
     db.session.delete(item)
@@ -1251,7 +1149,6 @@ def delete_inventory(item_id):
     flash('Item deleted.', 'success')
     return redirect(url_for('inventory'))
 
-# Finance Reports
 @app.route('/finance/reports')
 def finance_reports():
     if session.get('role') != 'finance':
@@ -1260,49 +1157,42 @@ def finance_reports():
     tuition_collected      = db.session.query(db.func.sum(FeePayment.amount)).filter_by(status='Paid').scalar() or 0
     tuition_pending        = db.session.query(db.func.sum(FeePayment.amount)).filter_by(status='Pending').scalar() or 0
     tuition_overdue        = db.session.query(db.func.sum(FeePayment.amount)).filter_by(status='Overdue').scalar() or 0
-    tuition_records        = FeePayment.query.count()
     receivable_received    = db.session.query(db.func.sum(Receivable.amount)).filter_by(status='Received').scalar() or 0
     receivable_outstanding = db.session.query(db.func.sum(Receivable.amount)).filter_by(status='Outstanding').scalar() or 0
     receivable_overdue     = db.session.query(db.func.sum(Receivable.amount)).filter_by(status='Overdue').scalar() or 0
-    receivable_records     = Receivable.query.count()
     payable_paid           = db.session.query(db.func.sum(Payable.amount)).filter_by(status='Paid').scalar() or 0
     payable_pending        = db.session.query(db.func.sum(Payable.amount)).filter_by(status='Pending').scalar() or 0
     payable_overdue        = db.session.query(db.func.sum(Payable.amount)).filter_by(status='Overdue').scalar() or 0
-    payable_records        = Payable.query.count()
     cash_deposits          = db.session.query(db.func.sum(CashBank.amount)).filter_by(transaction_type='Deposit').scalar() or 0
     cash_withdrawals       = db.session.query(db.func.sum(CashBank.amount)).filter_by(transaction_type='Withdrawal').scalar() or 0
     grants_total           = db.session.query(db.func.sum(GrantDonation.amount)).filter_by(type='Grant').scalar() or 0
     donations_total        = db.session.query(db.func.sum(GrantDonation.amount)).filter_by(type='Donation').scalar() or 0
     payroll_list           = FinancePayroll.query.all()
-    payroll_staff          = FinancePayroll.query.count()
     payroll_total          = sum(s.basic_salary + s.allowances for s in payroll_list)
     payroll_paid           = sum(s.basic_salary + s.allowances for s in payroll_list if s.status == 'Paid')
     payroll_pending        = sum(s.basic_salary + s.allowances for s in payroll_list if s.status == 'Pending')
     inventory_list         = FinanceInventory.query.all()
-    inventory_items        = FinanceInventory.query.count()
     inventory_value        = sum(i.quantity * i.unit_price for i in inventory_list)
-    inventory_low_stock    = sum(1 for i in inventory_list if i.quantity <= i.min_stock)
     total_income           = tuition_collected + grants_total + donations_total + receivable_received
     total_expenses         = payable_paid + payroll_total
-    net_balance            = total_income - total_expenses
-    total_outstanding      = receivable_outstanding + tuition_pending
     return render_template('finance/reports.html',
-                           total_income=total_income, total_expenses=total_expenses,
-                           net_balance=net_balance, total_outstanding=total_outstanding,
-                           tuition_collected=tuition_collected, tuition_pending=tuition_pending,
-                           tuition_overdue=tuition_overdue, tuition_records=tuition_records,
-                           receivable_received=receivable_received,
-                           receivable_outstanding=receivable_outstanding,
-                           receivable_overdue=receivable_overdue,
-                           receivable_records=receivable_records,
-                           payable_paid=payable_paid, payable_pending=payable_pending,
-                           payable_overdue=payable_overdue, payable_records=payable_records,
-                           cash_deposits=cash_deposits, cash_withdrawals=cash_withdrawals,
-                           grants_total=grants_total, donations_total=donations_total,
-                           payroll_staff=payroll_staff, payroll_total=payroll_total,
-                           payroll_paid=payroll_paid, payroll_pending=payroll_pending,
-                           inventory_items=inventory_items, inventory_value=inventory_value,
-                           inventory_low_stock=inventory_low_stock)
+        total_income=total_income, total_expenses=total_expenses,
+        net_balance=total_income - total_expenses,
+        total_outstanding=receivable_outstanding + tuition_pending,
+        tuition_collected=tuition_collected, tuition_pending=tuition_pending,
+        tuition_overdue=tuition_overdue, tuition_records=FeePayment.query.count(),
+        receivable_received=receivable_received,
+        receivable_outstanding=receivable_outstanding,
+        receivable_overdue=receivable_overdue, receivable_records=Receivable.query.count(),
+        payable_paid=payable_paid, payable_pending=payable_pending,
+        payable_overdue=payable_overdue, payable_records=Payable.query.count(),
+        cash_deposits=cash_deposits, cash_withdrawals=cash_withdrawals,
+        grants_total=grants_total, donations_total=donations_total,
+        payroll_staff=FinancePayroll.query.count(), payroll_total=payroll_total,
+        payroll_paid=payroll_paid, payroll_pending=payroll_pending,
+        inventory_items=FinanceInventory.query.count(),
+        inventory_value=inventory_value,
+        inventory_low_stock=sum(1 for i in inventory_list if i.quantity <= i.min_stock))
 
 
 # ═══════════════════════════════════════════
@@ -1323,91 +1213,79 @@ def front_office_dashboard():
     course_names = [c.strip() for c in (staff.courses_taught or '').split(',') if c.strip()]
     my_courses   = Course.query.filter(Course.name.in_(course_names)).all() if course_names else []
     today_name   = cal.day_name[date.today().weekday()]
-    today_classes= Timetable.query.filter_by(
-        lecturer = staff.full_name or staff.staff_id,
-        day      = today_name
-    ).all()
+    today_classes = Timetable.query.filter_by(
+        lecturer=staff.full_name or staff.staff_id, day=today_name).all()
     my_exams = Examination.query.filter_by(
-        invigilator = staff.full_name or staff.staff_id,
-        status      = 'Scheduled'
-    ).all()
+        invigilator=staff.full_name or staff.staff_id, status='Scheduled').all()
     announcements = Announcement.query.filter(
         Announcement.audience.in_(['All', 'Staff'])
     ).order_by(Announcement.id.desc()).limit(5).all()
     return render_template('staff/dashboard.html',
-                           staff=staff,
-                           my_courses=my_courses,
-                           today_classes=today_classes,
-                           my_exams=my_exams,
-                           announcements=announcements)
+        staff=staff, my_courses=my_courses,
+        today_classes=today_classes, my_exams=my_exams,
+        announcements=announcements)
 
 @app.route('/staff/my-courses')
 def staff_my_courses():
     if session.get('role') != 'front_office':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     staff        = get_staff()
     course_names = [c.strip() for c in (staff.courses_taught or '').split(',') if c.strip()]
-    my_courses   = Course.query.filter(Course.name.in_(course_names)).all() if course_names else []
-    return render_template('staff/courses.html', my_courses=my_courses, staff=staff)
+    return render_template('staff/courses.html',
+        my_courses=Course.query.filter(Course.name.in_(course_names)).all() if course_names else [],
+        staff=staff)
 
 @app.route('/staff/timetable')
 def staff_timetable():
     if session.get('role') != 'front_office':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
-    staff     = get_staff()
-    timetable = Timetable.query.filter_by(
-        lecturer = staff.full_name or staff.staff_id
-    ).order_by(Timetable.day, Timetable.start_time).all()
-    return render_template('staff/timetable.html', timetable=timetable, staff=staff)
+    staff = get_staff()
+    return render_template('staff/timetable.html',
+        timetable=Timetable.query.filter_by(
+            lecturer=staff.full_name or staff.staff_id
+        ).order_by(Timetable.day, Timetable.start_time).all(),
+        staff=staff)
 
 @app.route('/staff/exams')
 def staff_exams():
     if session.get('role') != 'front_office':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
-    staff    = get_staff()
-    my_exams = Examination.query.filter_by(
-        invigilator = staff.full_name or staff.staff_id
-    ).order_by(Examination.exam_date).all()
-    return render_template('staff/exams.html', my_exams=my_exams, staff=staff)
+    staff = get_staff()
+    return render_template('staff/exams.html',
+        my_exams=Examination.query.filter_by(
+            invigilator=staff.full_name or staff.staff_id
+        ).order_by(Examination.exam_date).all(),
+        staff=staff)
 
 @app.route('/staff/announcements')
 def staff_announcements():
     if session.get('role') != 'front_office':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
-    announcements = Announcement.query.filter(
-        Announcement.audience.in_(['All', 'Staff'])
-    ).order_by(Announcement.id.desc()).all()
-    return render_template('staff/announcements.html', announcements=announcements)
+    return render_template('staff/announcements.html',
+        announcements=Announcement.query.filter(
+            Announcement.audience.in_(['All', 'Staff'])
+        ).order_by(Announcement.id.desc()).all())
 
 @app.route('/staff/notices')
 def staff_notices():
     if session.get('role') != 'front_office':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
-    staff   = get_staff()
-    notices = StaffNotice.query.filter_by(
-        posted_by = staff.staff_id
-    ).order_by(StaffNotice.id.desc()).all()
-    return render_template('staff/notices.html', notices=notices, staff=staff)
+    staff = get_staff()
+    return render_template('staff/notices.html',
+        notices=StaffNotice.query.filter_by(posted_by=staff.staff_id).order_by(StaffNotice.id.desc()).all(),
+        staff=staff)
 
 @app.route('/staff/notices/add', methods=['POST'])
 def add_staff_notice():
     if session.get('role') != 'front_office':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     staff = get_staff()
     db.session.add(StaffNotice(
-        title       = request.form['title'],
-        message     = request.form['message'],
-        notice_type = request.form['notice_type'],
-        course      = request.form.get('course', ''),
-        posted_by   = staff.staff_id,
-        date        = request.form['date'],
-        audience    = request.form.get('audience', 'Students')
+        title=request.form['title'], message=request.form['message'],
+        notice_type=request.form['notice_type'],
+        course=request.form.get('course', ''),
+        posted_by=staff.staff_id, date=request.form['date'],
+        audience=request.form.get('audience', 'Students')
     ))
     db.session.commit()
     flash('Notice posted successfully!', 'success')
@@ -1416,7 +1294,6 @@ def add_staff_notice():
 @app.route('/staff/notices/delete/<int:notice_id>', methods=['POST'])
 def delete_staff_notice(notice_id):
     if session.get('role') != 'front_office':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     notice = StaffNotice.query.get_or_404(notice_id)
     db.session.delete(notice)
@@ -1427,26 +1304,19 @@ def delete_staff_notice(notice_id):
 @app.route('/staff/profile')
 def staff_profile():
     if session.get('role') != 'front_office':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
-    staff = get_staff()
-    return render_template('staff/profile.html', staff=staff)
+    return render_template('staff/profile.html', staff=get_staff())
 
 @app.route('/staff/profile/update', methods=['POST'])
 def update_staff_profile():
     if session.get('role') != 'front_office':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     staff = get_staff()
     if staff:
         staff.full_name = request.form.get('full_name', '')
         staff.phone     = request.form.get('phone', '')
         new_email       = request.form.get('email', '')
-        existing = Staff.query.filter(
-            Staff.email == new_email,
-            Staff.id != staff.id
-        ).first()
-        if existing:
+        if Staff.query.filter(Staff.email == new_email, Staff.id != staff.id).first():
             flash('That email is already in use.', 'error')
         else:
             staff.email = new_email
@@ -1454,6 +1324,7 @@ def update_staff_profile():
             db.session.commit()
             flash('Profile updated successfully!', 'success')
     return redirect(url_for('staff_profile'))
+
 
 # ═══════════════════════════════════════════
 # MESSAGES
@@ -1463,48 +1334,35 @@ def update_staff_profile():
 def messages():
     if not session.get('username'):
         return redirect(url_for('staff_login'))
-    username    = session.get('username')
-    role        = session.get('role')
-    inbox       = Message.query.filter_by(receiver_id=username).order_by(Message.date_sent.desc()).all()
-    sent        = Message.query.filter_by(sender_id=username).order_by(Message.date_sent.desc()).all()
-    unread      = Message.query.filter_by(receiver_id=username, is_read=False).count()
-    auto_to     = request.args.get('to', '')
-
+    username = session.get('username')
+    role     = session.get('role')
+    inbox    = Message.query.filter_by(receiver_id=username).order_by(Message.date_sent.desc()).all()
+    sent     = Message.query.filter_by(sender_id=username).order_by(Message.date_sent.desc()).all()
+    unread   = Message.query.filter_by(receiver_id=username, is_read=False).count()
+    auto_to  = request.args.get('to', '')
     if role == 'admin':
         contacts = Staff.query.filter(
             Staff.role.in_(['finance', 'front_office']),
-            Staff.staff_id != username
-        ).all()
-    elif role == 'finance':
-        contacts = Staff.query.filter_by(role='admin').all()
-    elif role == 'front_office':
+            Staff.staff_id != username).all()
+    elif role in ['finance', 'front_office']:
         contacts = Staff.query.filter_by(role='admin').all()
     else:
         contacts = []
-
-    # If coming from finance overview auto select finance contact
     auto_contact = None
     if auto_to == 'finance':
         auto_contact = Staff.query.filter_by(role='finance').first()
-
     return render_template('messages.html',
-                           inbox=inbox,
-                           sent=sent,
-                           unread=unread,
-                           contacts=contacts,
-                           auto_contact=auto_contact)
+        inbox=inbox, sent=sent, unread=unread,
+        contacts=contacts, auto_contact=auto_contact)
 
 @app.route('/messages/send', methods=['POST'])
 def send_message():
     if not session.get('username'):
         return redirect(url_for('staff_login'))
-    sender   = get_staff() or Staff.query.filter_by(staff_id=session.get('username')).first()
-    receiver_id = request.form.get('receiver_id')
-    receiver    = Staff.query.filter_by(staff_id=receiver_id).first()
     db.session.add(Message(
         sender_id   = session.get('username'),
         sender_name = session.get('full_name') or session.get('username'),
-        receiver_id = receiver_id,
+        receiver_id = request.form.get('receiver_id'),
         subject     = request.form.get('subject'),
         body        = request.form.get('body'),
         reply_to    = request.form.get('reply_to') or None
@@ -1554,5 +1412,9 @@ def logout():
     return redirect(url_for('home'))
 
 
+# ═══════════════════════════════════════════
+# RUN
+# ═══════════════════════════════════════════
+
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
