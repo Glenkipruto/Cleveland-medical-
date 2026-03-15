@@ -3,19 +3,17 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import date, datetime, timedelta
 import os
 
+_base = os.path.dirname(os.path.abspath(__file__))
 
 def eat_now():
     from datetime import datetime as dt, timedelta
     return dt.utcnow() + timedelta(hours=3)
 
 
-
-import os as _os
-_base = _os.path.dirname(_os.path.abspath(__file__))
 app = Flask(
     __name__,
-    template_folder=_os.path.join(_base, '..', 'frontend', 'templates'),
-    static_folder=_os.path.join(_base, '..', 'frontend', 'static')
+    template_folder=os.path.join(_base, '..', 'frontend', 'templates'),
+    static_folder=os.path.join(_base, '..', 'frontend', 'static')
 )
 
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'cleveland-secret-key-2024')
