@@ -2,30 +2,64 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
   <title>CMC Finance Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/finance.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
+  <style>
+    .hamburger {
+      display: none;
+      font-size: 28px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      color: var(--gold, #c9a84c);
+      padding: 4px 8px;
+    }
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0,0,0,0.5);
+      z-index: 998;
+    }
+    .sidebar-overlay.open { display: block; }
+    @media (max-width: 768px) {
+      .hamburger { display: block; }
+      .sidebar {
+        position: fixed !important;
+        top: 0; left: -280px !important;
+        height: 100vh !important;
+        width: 260px !important;
+        z-index: 999 !important;
+        transition: left 0.3s ease;
+        overflow-y: auto;
+        display: block !important;
+      }
+      .sidebar.open { left: 0 !important; }
+      .main { margin-left: 0 !important; width: 100% !important; }
+    }
+  </style>
 </head>
 <body>
 
+<div class="sidebar-overlay" id="overlay"></div>
+
 <!-- SIDEBAR -->
-<aside class="sidebar">
+<aside class="sidebar" id="sidebar">
   <div class="sidebar-logo">
     <div class="crest">C</div>
     <h2>Cleveland Medical College</h2>
     <p>Finance Portal</p>
   </div>
 
-  <!-- MAIN -->
   <div class="sidebar-section">Main</div>
   <a href="{{ url_for('finance_dashboard') }}" class="nav-item active">
     <span class="nav-icon">📊</span> Dashboard
   </a>
 
-  <!-- FINANCE -->
   <div class="sidebar-section">Finance</div>
   <a href="{{ url_for('tuition') }}" class="nav-item"><span class="nav-icon">💰</span> Tuition & Payments</a>
   <a href="{{ url_for('accounts_receivable') }}" class="nav-item"><span class="nav-icon">📥</span> Accounts Receivable</a>
@@ -34,10 +68,10 @@
   <a href="{{ url_for('grants_donations') }}" class="nav-item"><span class="nav-icon">🎁</span> Grants & Donations</a>
   <a href="{{ url_for('payroll') }}" class="nav-item"><span class="nav-icon">👥</span> Payroll</a>
 
-  <!-- OPERATIONS -->
   <div class="sidebar-section">Operations</div>
   <a href="{{ url_for('inventory') }}" class="nav-item"><span class="nav-icon">📦</span> Inventory</a>
-<a href="{{ url_for('finance_reports') }}" class="nav-item"><span class="nav-icon">📈</span> Reports</a>  <!-- USER -->
+  <a href="{{ url_for('finance_reports') }}" class="nav-item"><span class="nav-icon">📈</span> Reports</a>
+
   <div class="sidebar-footer">
     <div class="user-card">
         <div class="user-avatar">FM</div>
@@ -54,68 +88,64 @@
         transition: background 0.2s;">
         Logout
     </a>
-</div>
+  </div>
 </aside>
 
 <!-- MAIN AREA -->
 <div class="main">
 
-  <!-- TOPBAR -->
-     
-        <!-- TOPBAR -->
-<header class="topbar">
-    <div>
+  <header class="topbar">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <button class="hamburger" id="hamburger-btn">☰</button>
+      <div>
         <h1>Finance Dashboard</h1>
         <p>Financial overview · Academic Year 2025/2026</p>
+      </div>
     </div>
     <div style="display:flex; align-items:center; gap:16px;">
-        <div id="live-date" style="
-            background:rgba(201,168,76,0.1); color:var(--gold);
-            padding:6px 14px; border-radius:20px;
-            font-size:12px; font-weight:600;
-            border:1px solid var(--border);">
-        </div>
-        <span class="badge">FY 2025/26</span>
-        <a href="{{ url_for('messages') }}" style="text-decoration:none; text-align:center;">
-            <div style="position:relative; display:inline-block;">
-                <div style="width:52px; height:52px;
-                            background:rgba(201,168,76,0.15);
-                            border-radius:14px;
-                            display:flex; align-items:center; justify-content:center;
-                            font-size:26px; cursor:pointer;
-                            border:1px solid var(--border);
-                            box-shadow:0 4px 12px rgba(201,168,76,0.2);">
-                    💬
-                </div>
-                {% if unread_messages > 0 %}
-                <span style="position:absolute; top:-8px; right:-8px;
-                             background:#c94040; color:white;
-                             font-size:11px; font-weight:700;
-                             width:20px; height:20px; border-radius:50%;
-                             display:flex; align-items:center; justify-content:center;">
-                    {{ unread_messages }}
-                </span>
-                {% endif %}
-            </div>
-            <div style="font-size:11px; font-weight:600; color:var(--gold);
-                        margin-top:4px; letter-spacing:0.03em;">
-                Messages
-            </div>
-        </a>
+      <div id="live-date" style="
+          background:rgba(201,168,76,0.1); color:var(--gold);
+          padding:6px 14px; border-radius:20px;
+          font-size:12px; font-weight:600;
+          border:1px solid var(--border);">
+      </div>
+      <span class="badge">FY 2025/26</span>
+      <a href="{{ url_for('messages') }}" style="text-decoration:none; text-align:center;">
+          <div style="position:relative; display:inline-block;">
+              <div style="width:52px; height:52px;
+                          background:rgba(201,168,76,0.15);
+                          border-radius:14px;
+                          display:flex; align-items:center; justify-content:center;
+                          font-size:26px; cursor:pointer;
+                          border:1px solid var(--border);
+                          box-shadow:0 4px 12px rgba(201,168,76,0.2);">
+                  💬
+              </div>
+              {% if unread_messages > 0 %}
+              <span style="position:absolute; top:-8px; right:-8px;
+                           background:#c94040; color:white;
+                           font-size:11px; font-weight:700;
+                           width:20px; height:20px; border-radius:50%;
+                           display:flex; align-items:center; justify-content:center;">
+                  {{ unread_messages }}
+              </span>
+              {% endif %}
+          </div>
+          <div style="font-size:11px; font-weight:600; color:var(--gold);
+                      margin-top:4px; letter-spacing:0.03em;">
+              Messages
+          </div>
+      </a>
     </div>
-</header>
+  </header>
 
-  <!-- FLASH MESSAGES -->
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% for category, message in messages %}
       <div class="flash flash-{{ category }}">{{ message }}</div>
     {% endfor %}
   {% endwith %}
 
-  <!-- CONTENT -->
   <div class="content">
-
-    <!-- STAT CARDS -->
     <div class="stats-grid">
       <div class="stat-card income">
         <div class="stat-icon">💰</div>
@@ -143,9 +173,7 @@
       </div>
     </div>
 
-    <!-- CHART + RECENT PAYMENTS -->
     <div class="dash-row">
-
       <div class="card">
         <div class="card-title">Revenue vs Expenses</div>
         <div class="card-subtitle">Monthly comparison</div>
@@ -194,45 +222,55 @@
           </tbody>
         </table>
       </div>
-
     </div>
   </div>
 </div>
 
 <script>
-  fetch('/api/chart-data')
-    .then(r => r.json())
-    .then(data => {
-      const container = document.getElementById('main-chart');
-      const max = Math.max(...data.income, ...data.expenses);
-      data.months.forEach((month, i) => {
-        const group = document.createElement('div');
-        group.style.cssText = 'flex:1; display:flex; flex-direction:column; align-items:center;';
-        const bars = document.createElement('div');
-        bars.style.cssText = 'display:flex; gap:3px; align-items:flex-end; height:120px; width:100%;';
-        const iBar = document.createElement('div');
-        iBar.className = 'bar income-bar';
-        iBar.style.height = `${(data.income[i] / max) * 110}px`;
-        iBar.title = `Income: KES ${data.income[i].toLocaleString()}`;
-        const eBar = document.createElement('div');
-        eBar.className = 'bar expense-bar';
-        eBar.style.height = `${(data.expenses[i] / max) * 110}px`;
-        eBar.title = `Expenses: KES ${data.expenses[i].toLocaleString()}`;
-        bars.appendChild(iBar);
-        bars.appendChild(eBar);
-        group.appendChild(bars);
-        const label = document.createElement('div');
-        label.className = 'bar-label';
-        label.textContent = month;
-        group.appendChild(label);
-        container.appendChild(group);
-      });
+var btn = document.getElementById('hamburger-btn');
+var sidebar = document.getElementById('sidebar');
+var overlay = document.getElementById('overlay');
+
+btn.addEventListener('click', function() {
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('open');
+});
+
+overlay.addEventListener('click', function() {
+  sidebar.classList.remove('open');
+  overlay.classList.remove('open');
+});
+
+document.getElementById('live-date').textContent = new Date().toLocaleDateString('en-US', {
+  weekday:'long', year:'numeric', month:'long', day:'numeric'
+});
+
+fetch('/api/chart-data')
+  .then(r => r.json())
+  .then(data => {
+    var container = document.getElementById('main-chart');
+    var max = Math.max.apply(null, data.income.concat(data.expenses));
+    data.months.forEach(function(month, i) {
+      var group = document.createElement('div');
+      group.style.cssText = 'flex:1; display:flex; flex-direction:column; align-items:center;';
+      var bars = document.createElement('div');
+      bars.style.cssText = 'display:flex; gap:3px; align-items:flex-end; height:120px; width:100%;';
+      var iBar = document.createElement('div');
+      iBar.className = 'bar income-bar';
+      iBar.style.height = (max > 0 ? (data.income[i] / max) * 110 : 0) + 'px';
+      var eBar = document.createElement('div');
+      eBar.className = 'bar expense-bar';
+      eBar.style.height = (max > 0 ? (data.expenses[i] / max) * 110 : 0) + 'px';
+      bars.appendChild(iBar);
+      bars.appendChild(eBar);
+      group.appendChild(bars);
+      var label = document.createElement('div');
+      label.className = 'bar-label';
+      label.textContent = month;
+      group.appendChild(label);
+      container.appendChild(group);
     });
-</script>
-<script>
-    document.getElementById('live-date').textContent = new Date().toLocaleDateString('en-US', {
-        weekday:'long', year:'numeric', month:'long', day:'numeric'
-    });
+  });
 </script>
 </body>
 </html>
