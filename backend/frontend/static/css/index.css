@@ -112,7 +112,7 @@ text-decoration:underline;
     .hero {
         height: 85vh;
         width: 100vw;
-        background-size: cover;
+        background-size: 100% 100%;
         background-position: center;
         padding: 20px;
         box-sizing: border-box;
