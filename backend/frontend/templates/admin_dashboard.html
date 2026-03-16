@@ -15,7 +15,7 @@
             cursor: pointer;
             background: none;
             border: none;
-            color: var(--navy, #003366);
+            color: #003366;
             padding: 4px 8px;
         }
         .sidebar-overlay {
@@ -26,26 +26,27 @@
             background: rgba(0,0,0,0.5);
             z-index: 998;
         }
+        .sidebar-overlay.open { display: block; }
         @media (max-width: 768px) {
             .hamburger { display: block; }
             .sidebar {
                 position: fixed !important;
-                top: 0; left: -280px;
-                height: 100vh;
+                top: 0; left: -280px !important;
+                height: 100vh !important;
                 width: 260px !important;
-                z-index: 999;
+                z-index: 999 !important;
                 transition: left 0.3s ease;
                 overflow-y: auto;
+                display: block !important;
             }
-            .sidebar.open { left: 0; }
-            .sidebar-overlay.open { display: block; }
+            .sidebar.open { left: 0 !important; }
             .main { margin-left: 0 !important; width: 100% !important; }
         }
     </style>
 </head>
 <body>
 
-<div class="sidebar-overlay" id="overlay" onclick="closeSidebar()"></div>
+<div class="sidebar-overlay" id="overlay"></div>
 
 <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
@@ -89,7 +90,7 @@
 
     <header class="topbar">
     <div style="display:flex; align-items:center; gap:10px;">
-        <button class="hamburger" onclick="openSidebar()">☰</button>
+        <button class="hamburger" id="hamburger-btn">☰</button>
         <div>
             <h1 class="page-title">Dashboard Overview</h1>
             <p class="page-subtitle">Financial summary · Cleveland Medical College</p>
@@ -101,7 +102,7 @@
         <a href="{{ url_for('messages') }}" style="text-decoration:none; text-align:center;">
             <div style="position:relative; display:inline-block;">
                 <div style="width:52px; height:52px;
-                            background:var(--navy);
+                            background:#003366;
                             border-radius:14px;
                             display:flex; align-items:center; justify-content:center;
                             font-size:26px; cursor:pointer;
@@ -118,7 +119,7 @@
                 </span>
                 {% endif %}
             </div>
-            <div style="font-size:11px; font-weight:600; color:var(--navy);
+            <div style="font-size:11px; font-weight:600; color:#003366;
                         margin-top:4px; letter-spacing:0.03em;">
                 Messages
             </div>
@@ -243,7 +244,7 @@
             {% else %}
                 <div class="empty-state">No announcements yet</div>
             {% endif %}
-            <a href="{{ url_for('announcements') }}" style="font-size:0.8rem; color:var(--navy); margin-top:10px; display:block;">
+            <a href="{{ url_for('announcements') }}" style="font-size:0.8rem; color:#003366; margin-top:10px; display:block;">
                 View all →
             </a>
         </div>
@@ -265,20 +266,25 @@
 </main>
 
 <script>
-function openSidebar() {
-    document.getElementById('sidebar').classList.add('open');
-    document.getElementById('overlay').classList.add('open');
-}
-function closeSidebar() {
-    document.getElementById('sidebar').classList.remove('open');
-    document.getElementById('overlay').classList.remove('open');
-}
+var btn = document.getElementById('hamburger-btn');
+var sidebar = document.getElementById('sidebar');
+var overlay = document.getElementById('overlay');
+
+btn.addEventListener('click', function() {
+    sidebar.classList.toggle('open');
+    overlay.classList.toggle('open');
+});
+
+overlay.addEventListener('click', function() {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('open');
+});
 
 document.getElementById('live-date').textContent = new Date().toLocaleDateString('en-US', {
     weekday:'long', year:'numeric', month:'long', day:'numeric'
 });
 
-const ctx1 = document.getElementById('revenueChart').getContext('2d');
+var ctx1 = document.getElementById('revenueChart').getContext('2d');
 new Chart(ctx1, {
     type: 'bar',
     data: {
@@ -291,11 +297,11 @@ new Chart(ctx1, {
     options: {
         responsive: true,
         plugins: { legend: { position: 'top' } },
-        scales: { y: { beginAtZero: true, ticks: { callback: v => 'KSh ' + v.toLocaleString() } } }
+        scales: { y: { beginAtZero: true, ticks: { callback: function(v) { return 'KSh ' + v.toLocaleString(); } } } }
     }
 });
 
-const ctx2 = document.getElementById('breakdownChart').getContext('2d');
+var ctx2 = document.getElementById('breakdownChart').getContext('2d');
 new Chart(ctx2, {
     type: 'doughnut',
     data: {
