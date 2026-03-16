@@ -1,47 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reports | Cleveland Medical College</title>
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        .btn-outline{background:white;color:var(--navy);border:1.5px solid var(--navy);padding:9px 18px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:0.875rem;font-weight:600;cursor:pointer;}
-        .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
-        .stat-mini{background:white;border-radius:10px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.06);border-left:3px solid var(--navy);}
-        .stat-mini-label{font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;}
-        .stat-mini-val{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--text);font-weight:700;}
-        .stat-mini-sub{font-size:0.75rem;color:var(--muted);margin-top:2px;}
-        .tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--border);}
-        .tab{padding:10px 20px;font-size:0.875rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .18s;}
-        .tab.active{color:var(--navy);border-bottom-color:var(--navy);}
-        .tab-content{display:none;}
-        .tab-content.active{display:block;}
-        .report-section{background:white;border-radius:12px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.06);margin-bottom:20px;}
-        .report-section-title{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border);}
-        .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
-        .summary-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:0.875rem;}
-        .summary-row:last-child{border-bottom:none;font-weight:700;}
-        .val-income{color:#166534;font-weight:600;}
-        .val-expense{color:#991b1b;font-weight:600;}
-        .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
-        .chart-box{background:white;border-radius:12px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.06);}
-        .chart-box-title{font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy);margin-bottom:16px;}
-        .topbar-actions{display:flex;gap:10px;}
-        @media print {
-            .sidebar,.topbar-actions,.tabs{display:none !important;}
-            .main{margin-left:0 !important;}
-            .tab-content{display:block !important;}
-        }
-    </style>
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Reports | Cleveland Medical College</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
+  <style>
+    .btn-outline{background:white;color:var(--navy);border:1.5px solid var(--navy);padding:9px 18px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:0.875rem;font-weight:600;cursor:pointer;}
+    .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+    .stat-mini{background:white;border-radius:10px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,0.06);border-left:3px solid var(--navy);}
+    .stat-mini-label{font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:4px;}
+    .stat-mini-val{font-family:'Playfair Display',serif;font-size:1.3rem;color:var(--text);font-weight:700;}
+    .stat-mini-sub{font-size:0.75rem;color:var(--muted);margin-top:2px;}
+    .tabs{display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--border);}
+    .tab{padding:10px 20px;font-size:0.875rem;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .18s;}
+    .tab.active{color:var(--navy);border-bottom-color:var(--navy);}
+    .tab-content{display:none;}
+    .tab-content.active{display:block;}
+    .report-section{background:white;border-radius:12px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.06);margin-bottom:20px;}
+    .report-section-title{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--navy);margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border);}
+    .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+    .summary-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:0.875rem;}
+    .summary-row:last-child{border-bottom:none;font-weight:700;}
+    .val-income{color:#166534;font-weight:600;}
+    .val-expense{color:#991b1b;font-weight:600;}
+    .charts-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
+    .chart-box{background:white;border-radius:12px;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,0.06);}
+    .chart-box-title{font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy);margin-bottom:16px;}
+    .topbar-actions{display:flex;gap:10px;}
+    .hamburger{display:none;font-size:28px;cursor:pointer;background:none;border:none;color:#003366;padding:4px 8px;}
+    .sidebar-overlay{display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.5);z-index:998;}
+    .sidebar-overlay.open{display:block;}
+    @media(max-width:768px){
+        .hamburger{display:block;}
+        .sidebar{position:fixed!important;top:0;left:-280px!important;height:100vh!important;width:260px!important;z-index:999!important;transition:left 0.3s ease;overflow-y:auto;display:block!important;}
+        .sidebar.open{left:0!important;}
+        .main{margin-left:0!important;width:100%!important;}
+        .stats-row{grid-template-columns:1fr 1fr!important;}
+        .charts-row{grid-template-columns:1fr!important;}
+        .summary-grid{grid-template-columns:1fr!important;}
+        .tabs{overflow-x:auto;white-space:nowrap;}
+    }
+    @media print{.sidebar,.topbar-actions,.tabs{display:none!important;}.main{margin-left:0!important;}.tab-content{display:block!important;}}
+  </style>
 </head>
 <body>
 
-<aside class="sidebar">
+<div class="sidebar-overlay" id="overlay"></div>
+
+<aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
         <div class="brand-icon">CMC</div>
         <div><div class="brand-name">Cleveland</div><div class="brand-sub">Medical College</div></div>
@@ -51,18 +61,14 @@
         <a href="{{ url_for('admin_dashboard') }}" class="nav-item"><span class="nav-icon">⊞</span> Dashboard</a>
         <a href="{{ url_for('manage_staff') }}" class="nav-item"><span class="nav-icon">👥</span> Staff Management</a>
         <a href="{{ url_for('students') }}" class="nav-item"><span class="nav-icon">🎓</span> Students</a>
-
         <div class="nav-section-label">Academic</div>
         <a href="{{ url_for('courses') }}" class="nav-item"><span class="nav-icon">📚</span> Courses & Programs</a>
         <a href="{{ url_for('timetable') }}" class="nav-item"><span class="nav-icon">📅</span> Timetable</a>
         <a href="{{ url_for('examinations') }}" class="nav-item"><span class="nav-icon">📝</span> Examinations</a>
-
         <div class="nav-section-label">Communications</div>
         <a href="{{ url_for('announcements') }}" class="nav-item"><span class="nav-icon">📢</span> Announcements</a>
-
         <div class="nav-section-label">Finance</div>
         <a href="{{ url_for('finance_overview') }}" class="nav-item"><span class="nav-icon">👁️</span> Finance Overview</a>
-
         <div class="nav-section-label">Operations</div>
         <a href="{{ url_for('reports') }}" class="nav-item active"><span class="nav-icon">📊</span> Reports</a>
         <a href="{{ url_for('settings') }}" class="nav-item"><span class="nav-icon">⚙️</span> Settings</a>
@@ -80,19 +86,19 @@
 </aside>
 
 <main class="main">
-
     <header class="topbar">
-        <div>
-            <h1 class="page-title">Reports</h1>
-            <p class="page-subtitle">College overview and summary · Academic Year 2025/2026</p>
+        <div style="display:flex;align-items:center;gap:10px;">
+            <button class="hamburger" id="hamburger-btn">☰</button>
+            <div>
+                <h1 class="page-title">Reports</h1>
+                <p class="page-subtitle">College overview and summary · Academic Year 2025/2026</p>
+            </div>
         </div>
         <div class="topbar-actions">
             <button class="btn-outline" onclick="window.print()">🖨️ Print Report</button>
-            
         </div>
     </header>
 
-    <!-- TOP STAT CARDS -->
     <div class="stats-row">
         <div class="stat-mini">
             <div class="stat-mini-label">Total Students</div>
@@ -116,7 +122,6 @@
         </div>
     </div>
 
-    <!-- CHARTS ROW -->
     <div class="charts-row">
         <div class="chart-box">
             <div class="chart-box-title">Students by Program</div>
@@ -128,7 +133,6 @@
         </div>
     </div>
 
-    <!-- TABS -->
     <div class="tabs">
         <div class="tab active" onclick="switchTab('students', this)">Students</div>
         <div class="tab" onclick="switchTab('academic', this)">Academic</div>
@@ -136,7 +140,6 @@
         <div class="tab" onclick="switchTab('finance', this)">Finance Summary</div>
     </div>
 
-    <!-- TAB 1: STUDENTS -->
     <div class="tab-content active" id="tab-students">
         <div class="report-section">
             <div class="report-section-title">🎓 Student Summary</div>
@@ -155,32 +158,23 @@
                 </div>
             </div>
         </div>
-
         <div class="table-card">
             <div class="chart-title" style="margin-bottom:14px;">Students by Program</div>
             <table class="data-table">
-                <thead>
-                    <tr><th>Program</th><th>Number of Students</th></tr>
-                </thead>
+                <thead><tr><th>Program</th><th>Number of Students</th></tr></thead>
                 <tbody>
                     {% for program, count in programs %}
-                    <tr>
-                        <td>{{ program or 'Not assigned' }}</td>
-                        <td><strong>{{ count }}</strong></td>
-                    </tr>
+                    <tr><td>{{ program or 'Not assigned' }}</td><td><strong>{{ count }}</strong></td></tr>
                     {% else %}
                     <tr><td colspan="2" class="empty-state">No students yet.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-
         <div class="table-card" style="margin-top:20px;">
             <div class="chart-title" style="margin-bottom:14px;">Recently Enrolled Students</div>
             <table class="data-table">
-                <thead>
-                    <tr><th>Student ID</th><th>Name</th><th>Program</th><th>Year</th><th>Fee Balance</th><th>Status</th></tr>
-                </thead>
+                <thead><tr><th>Student ID</th><th>Name</th><th>Program</th><th>Year</th><th>Fee Balance</th><th>Status</th></tr></thead>
                 <tbody>
                     {% for s in recent_students %}
                     <tr>
@@ -199,7 +193,6 @@
         </div>
     </div>
 
-    <!-- TAB 2: ACADEMIC -->
     <div class="tab-content" id="tab-academic">
         <div class="report-section">
             <div class="report-section-title">📚 Academic Summary</div>
@@ -219,7 +212,6 @@
         </div>
     </div>
 
-    <!-- TAB 3: STAFF -->
     <div class="tab-content" id="tab-staff">
         <div class="report-section">
             <div class="report-section-title">👥 Staff Summary</div>
@@ -234,7 +226,6 @@
         </div>
     </div>
 
-    <!-- TAB 4: FINANCE SUMMARY -->
     <div class="tab-content" id="tab-finance">
         <div class="report-section">
             <div class="report-section-title">💰 Finance Summary (Overview Only)</div>
@@ -254,7 +245,6 @@
                     <div style="text-align:center;padding:20px;background:#f8fafc;border-radius:12px;">
                         <div style="font-size:0.85rem;color:var(--muted);margin-bottom:8px;">For detailed finance reports</div>
                         <div style="font-weight:700;color:var(--navy);font-size:1rem;">Contact the Finance Manager</div>
-                        <div style="font-size:0.8rem;color:var(--muted);margin-top:6px;">or check Finance Overview page</div>
                         <a href="{{ url_for('finance_overview') }}" style="display:inline-block;margin-top:12px;background:var(--navy);color:white;padding:8px 16px;border-radius:8px;text-decoration:none;font-size:0.85rem;font-weight:600;">
                             View Finance Overview →
                         </a>
@@ -263,62 +253,34 @@
             </div>
         </div>
     </div>
-
 </main>
 
 <script>
+var btn = document.getElementById('hamburger-btn');
+var sidebar = document.getElementById('sidebar');
+var overlay = document.getElementById('overlay');
+btn.addEventListener('click', function() { sidebar.classList.toggle('open'); overlay.classList.toggle('open'); });
+overlay.addEventListener('click', function() { sidebar.classList.remove('open'); overlay.classList.remove('open'); });
+
 function switchTab(name, el) {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+    document.querySelectorAll('.tab-content').forEach(function(t){ t.classList.remove('active'); });
     document.getElementById('tab-' + name).classList.add('active');
     el.classList.add('active');
 }
 
-// Students by program chart
-const programLabels = [{% for program, count in programs %}'{{ program or "Unknown" }}',{% endfor %}];
-const programData   = [{% for program, count in programs %}{{ count }},{% endfor %}];
-
+var programLabels = [{% for program, count in programs %}'{{ program or "Unknown" }}',{% endfor %}];
+var programData = [{% for program, count in programs %}{{ count }},{% endfor %}];
 new Chart(document.getElementById('programChart').getContext('2d'), {
     type: 'doughnut',
-    data: {
-        labels: programLabels,
-        datasets: [{
-            data: programData,
-            backgroundColor: ['#003366','#1a7a4a','#2563eb','#c0392b','#7c3aed','#f59e0b'],
-            borderWidth: 0,
-            hoverOffset: 8,
-        }]
-    },
-    options: {
-        responsive: true,
-        cutout: '60%',
-        plugins: { legend: { position: 'bottom' } }
-    }
+    data: { labels: programLabels, datasets: [{ data: programData, backgroundColor: ['#003366','#1a7a4a','#2563eb','#c0392b','#7c3aed','#f59e0b'], borderWidth: 0, hoverOffset: 8 }] },
+    options: { responsive: true, cutout: '60%', plugins: { legend: { position: 'bottom' } } }
 });
-
-// Finance overview chart
 new Chart(document.getElementById('financeChart').getContext('2d'), {
     type: 'bar',
-    data: {
-        labels: ['Collected', 'Outstanding', 'Total Income', 'Total Expenses'],
-        datasets: [{
-            data: [
-                {{ tuition_collected }},
-                {{ total_outstanding }},
-                {{ total_income }},
-                {{ total_expenses }}
-            ],
-            backgroundColor: ['#1a7a4a', '#c0392b', '#003366', '#7c3aed'],
-            borderRadius: 6,
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: { legend: { display: false } },
-        scales: { y: { beginAtZero: true, ticks: { callback: v => 'KSh ' + v.toLocaleString() } } }
-    }
+    data: { labels: ['Collected', 'Outstanding', 'Total Income', 'Total Expenses'], datasets: [{ data: [{{ tuition_collected }}, {{ total_outstanding }}, {{ total_income }}, {{ total_expenses }}], backgroundColor: ['#1a7a4a','#c0392b','#003366','#7c3aed'], borderRadius: 6 }] },
+    options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: function(v){ return 'KSh ' + v.toLocaleString(); } } } } }
 });
 </script>
-
 </body>
 </html>
