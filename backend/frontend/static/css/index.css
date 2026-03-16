@@ -42,7 +42,7 @@ text-decoration:underline;
 /* HERO SECTION */
 
 .hero{
-height:90vh;
+height:85vh;
 width:100%;
 background:url("../images/home.png") center/cover no-repeat;
 display:flex;
