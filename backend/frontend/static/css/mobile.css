@@ -1,0 +1,10 @@
+@media (max-width: 768px) {
+    .sidebar { display: none !important; }
+    .main-content { margin-left: 0 !important; width: 100% !important; }
+    .dashboard-grid { grid-template-columns: 1fr !important; }
+    .stats-grid { grid-template-columns: 1fr 1fr !important; }
+    .card { width: 100% !important; overflow-x: hidden !important; }
+    table { display: block; overflow-x: auto; white-space: nowrap; }
+    body { overflow-x: hidden !important; }
+    * { max-width: 100% !important; box-sizing: border-box !important; }
+}
