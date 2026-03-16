@@ -103,3 +103,25 @@
         box-sizing: border-box !important;
     }
 }
+    .quick-actions {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        width: 100% !important;
+    }
+
+    .q-btn {
+        width: 100% !important;
+        text-align: left !important;
+    }
+
+    .bottom-row {
+        display: block !important;
+        width: 100% !important;
+    }
+
+    .table-card,
+    .right-col,
+    .alert-card {
+        width: 100% !important;
+        overflow-x: auto !important;
+    }
