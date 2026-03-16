@@ -107,11 +107,11 @@ text-decoration:underline;
     }
 
     .hero {
-        height: calc(100vh - 80px);
+        height: 85;
         width: 100vw;
         background-image: url("../images/home.png");
-        background-size: cover;
-        background-position: center center;
+    background-size: 100% 100%;
+        background-position: center;
         background-repeat: no-repeat;
         padding: 20px;
         box-sizing: border-box;
