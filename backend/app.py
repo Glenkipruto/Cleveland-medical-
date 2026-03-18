@@ -321,6 +321,67 @@ class Message(db.Model):
     date_sent   = db.Column(db.DateTime,    default=eat_now)
     reply_to    = db.Column(db.Integer,     db.ForeignKey('messages.id'), nullable=True)
 
+# ── RECEPTIONIST MODELS ──
+class VisitorLog(db.Model):
+    __tablename__ = 'visitor_log'
+    id           = db.Column(db.Integer, primary_key=True)
+    visitor_name = db.Column(db.String(100), nullable=False)
+    phone        = db.Column(db.String(20), nullable=True)
+    purpose      = db.Column(db.String(200), nullable=False)
+    host         = db.Column(db.String(100), nullable=False)
+    id_number    = db.Column(db.String(50), nullable=True)
+    time_in      = db.Column(db.String(20), nullable=False)
+    time_out     = db.Column(db.String(20), nullable=True)
+    date         = db.Column(db.String(20), nullable=False)
+    recorded_by  = db.Column(db.String(100), nullable=False)
+
+class Appointment(db.Model):
+    __tablename__ = 'appointments'
+    id         = db.Column(db.Integer, primary_key=True)
+    title      = db.Column(db.String(200), nullable=False)
+    attendee   = db.Column(db.String(100), nullable=False)
+    appt_date  = db.Column(db.String(20), nullable=False)
+    appt_time  = db.Column(db.String(10), nullable=False)
+    location   = db.Column(db.String(100), nullable=True)
+    notes      = db.Column(db.Text, nullable=True)
+    status     = db.Column(db.String(20), default='Confirmed')
+    created_by = db.Column(db.String(100), nullable=False)
+    created_at = db.Column(db.DateTime, default=eat_now)
+
+class DocumentRequest(db.Model):
+    __tablename__ = 'document_requests'
+    id             = db.Column(db.Integer, primary_key=True)
+    requester_name = db.Column(db.String(100), nullable=False)
+    doc_type       = db.Column(db.String(100), nullable=False)
+    student_id     = db.Column(db.String(50), nullable=True)
+    notes          = db.Column(db.Text, nullable=True)
+    status         = db.Column(db.String(20), default='Pending')
+    date_requested = db.Column(db.String(20), nullable=False)
+    processed_by   = db.Column(db.String(100), nullable=True)
+    created_at     = db.Column(db.DateTime, default=eat_now)
+
+class MailPackage(db.Model):
+    __tablename__ = 'mail_packages'
+    id            = db.Column(db.Integer, primary_key=True)
+    mail_type     = db.Column(db.String(20), nullable=False)
+    party_name    = db.Column(db.String(100), nullable=False)
+    description   = db.Column(db.String(200), nullable=False)
+    notes         = db.Column(db.Text, nullable=True)
+    status        = db.Column(db.String(20), default='Pending')
+    date_recorded = db.Column(db.String(20), nullable=False)
+    recorded_by   = db.Column(db.String(100), nullable=False)
+    created_at    = db.Column(db.DateTime, default=eat_now)
+
+class OfficeSupply(db.Model):
+    __tablename__ = 'office_supplies'
+    id         = db.Column(db.Integer, primary_key=True)
+    item_name  = db.Column(db.String(100), nullable=False)
+    category   = db.Column(db.String(50), default='Stationery')
+    quantity   = db.Column(db.Integer, default=0)
+    unit       = db.Column(db.String(20), default='pcs')
+    min_stock  = db.Column(db.Integer, default=5)
+    created_at = db.Column(db.DateTime, default=eat_now)
+
 
 # ═══════════════════════════════════════════
 # CREATE TABLES + SETUP
@@ -1328,7 +1389,7 @@ def update_staff_profile():
 
 
 # ═══════════════════════════════════════════
-# RECEPTIONIST (Front Office Manager) DASHBOARD
+# RECEPTIONIST DASHBOARD + ROUTES
 # ═══════════════════════════════════════════
 
 @app.route('/receptionist-dashboard')
@@ -1337,6 +1398,7 @@ def receptionist_dashboard():
         flash('Access denied.')
         return redirect(url_for('staff_login'))
     staff = get_staff()
+    today_str = date.today().strftime('%Y-%m-%d')
     announcements = Announcement.query.filter(
         Announcement.audience.in_(['All', 'Staff'])
     ).order_by(Announcement.id.desc()).limit(5).all()
@@ -1346,12 +1408,15 @@ def receptionist_dashboard():
         active_students=Student.query.filter_by(status='Active').count(),
         total_announcements=Announcement.query.count(),
         announcements=announcements,
-        recent_students=Student.query.order_by(Student.id.desc()).limit(5).all())
+        recent_students=Student.query.order_by(Student.id.desc()).limit(5).all(),
+        today_visitors=VisitorLog.query.filter_by(date=today_str).count(),
+        pending_documents=DocumentRequest.query.filter_by(status='Pending').count(),
+        today_appointments=Appointment.query.filter_by(appt_date=today_str).count(),
+        pending_mail=MailPackage.query.filter_by(status='Pending', mail_type='Incoming').count())
 
 @app.route('/receptionist/students')
 def receptionist_students():
     if session.get('role') != 'receptionist':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     return render_template('receptionist/students.html',
         students=Student.query.order_by(Student.id.desc()).all())
@@ -1363,10 +1428,16 @@ def receptionist_student_profile(student_id):
     return render_template('receptionist/student_profile.html',
         student=Student.query.get_or_404(student_id))
 
+@app.route('/receptionist/student-assistance')
+def receptionist_student_assistance():
+    if session.get('role') != 'receptionist':
+        return redirect(url_for('staff_login'))
+    return render_template('receptionist/student_assistance.html',
+        courses=Course.query.filter_by(status='Active').order_by(Course.name).all())
+
 @app.route('/receptionist/announcements')
 def receptionist_announcements():
     if session.get('role') != 'receptionist':
-        flash('Access denied.')
         return redirect(url_for('staff_login'))
     return render_template('receptionist/announcements.html',
         announcements=Announcement.query.filter(
@@ -1396,6 +1467,221 @@ def update_receptionist_profile():
             db.session.commit()
             flash('Profile updated successfully!', 'success')
     return redirect(url_for('receptionist_profile'))
+
+# ── VISITOR LOG ──
+@app.route('/receptionist/visitor-log')
+def receptionist_visitor_log():
+    if session.get('role') != 'receptionist':
+        return redirect(url_for('staff_login'))
+    today_str = date.today().strftime('%Y-%m-%d')
+    visitors = VisitorLog.query.order_by(VisitorLog.id.desc()).all()
+    return render_template('receptionist/visitor_log.html',
+        visitors=visitors,
+        today_count=VisitorLog.query.filter_by(date=today_str).count(),
+        inside_count=VisitorLog.query.filter_by(date=today_str, time_out=None).count(),
+        total_count=VisitorLog.query.count())
+
+@app.route('/receptionist/visitor-log/add', methods=['POST'])
+def receptionist_add_visitor():
+    if session.get('role') != 'receptionist':
+        return redirect(url_for('staff_login'))
+    now = eat_now()
+    db.session.add(VisitorLog(
+        visitor_name=request.form['visitor_name'],
+        phone=request.form.get('phone', ''),
+        purpose=request.form['purpose'],
+        host=request.form['host'],
+        id_number=request.form.get('id_number', ''),
+        time_in=now.strftime('%H:%M'),
+        date=now.strftime('%Y-%m-%d'),
+        recorded_by=session.get('username')
+    ))
+    db.session.commit()
+    flash('Visitor signed in successfully!', 'success')
+    return redirect(url_for('receptionist_visitor_log'))
+
+@app.route('/receptionist/visitor-log/<int:visitor_id>/signout', methods=['POST'])
+def receptionist_visitor_signout(visitor_id):
+    if session.get('role') != 'receptionist':
+        return redirect(url_for('staff_login'))
+    visitor = VisitorLog.query.get_or_404(visitor_id)
+    visitor.time_out = eat_now().strftime('%H:%M')
+    db.session.commit()
+    flash(f'{visitor.visitor_name} signed out.', 'success')
+    return redirect(url_for('receptionist_visitor_log'))
+
+# ── APPOINTMENTS ──
+@app.route('/receptionist/appointments')
+def receptionist_appointments():
+    if session.get('role') != 'receptionist':
+        return redirect(url_for('staff_login'))
+    today_str = date.today().strftime('%Y-%m-%d')
+    appointments = Appointment.query.order_by(Appointment.appt_date, Appointment.appt_time).all()
+    return render_template('receptionist/appointments.html',
+        appointments=appointments,
+        today_count=Appointment.query.filter_by(appt_date=today_str).count(),
+        upcoming_count=Appointment.query.filter(Appointment.appt_date >= today_str).count(),
+        total_count=Appointment.query.count())
+
+@app.route('/receptionist/appointments/add', methods=['POST'])
+def receptionist_add_appointment():
+    if session.get('role') != 'receptionist':
+        return redirect(url_for('staff_login'))
+    db.session.add(Appointment(
+        title=request.form['title'],
+        attendee=request.form['attendee'],
+        appt_date=request.form['appt_date'],
+        appt_time=request.form['appt_time'],
+        location=request.form.get('location', ''),
+        notes=request.form.get('notes', ''),
+        status=request.form.get('status', 'Confirmed'),
+        created_by=session.get('username')
+    ))
+    db.session.commit()
+    flash('Appointment scheduled successfully!', 'success')
+    return redirect(url_for('receptionist_appointments'))
+
+@app.route('/receptionist/appointments/<int:appt_id>/delete', methods=['POST'])
+def receptionist_delete_appointment(appt_id):
+    if session.get('role') != 'receptionist':
+        return redirect(url_for('staff_login'))
+    appt = Appointment.query.get_or_404(appt_id)
+    db.session.delete(appt)
+    db.session.commit()
+    flash('Appointment deleted.', 'success')
+    return redirect(url_for('receptionist_appointments'))
+
+# ── DOCUMENT REQUESTS ──
+@app.route('/receptionist/documents')
+def receptionist_document_requests():
+    if session.get('role') != 'receptionist':
+        return redirect(url_for('staff_login'))
+    requests = DocumentRequest.query.order_by(DocumentRequest.created_at.desc()).all()
+    return render_template('receptionist/document_requests.html',
+        requests=requests,
+        pending_count=DocumentRequest.query.filter_by(status='Pending').count(),
+        completed_count=DocumentRequest.query.filter_by(status='Completed').count(),
+        total_count=DocumentRequest.query.count())
+
+@app.route('/receptionist/documents/add', methods=['POST'])
+def receptionist_add_document():
+    if session.get('role') != 'receptionist':
+        return redirect(url_for('staff_login'))
+    db.session.add(DocumentRequest(
+        requester_name=request.form['requester_name'],
+        doc_type=request.form['doc_type'],
+        student_id=request.form.get('student_id', ''),
+        notes=request.form.get('notes', ''),
+        date_requested=eat_now().strftime('%Y-%m-%d'),
+        processed_by=session.get('username')
+    ))
+    db.session.commit()
+    flash('Document request recorded!', 'success')
+    return redirect(url_for('receptionist_document_requests'))
+
+@app.route('/receptionist/documents/<int:doc_id>/complete', methods=['POST'])
+def receptionist_complete_document(doc_id):
+    if session.get('role') != 'receptionist':
+        return redirect(url_for('staff_login'))
+    doc = DocumentRequest.query.get_or_404(doc_id)
+    doc.status = 'Completed'
+    db.session.commit()
+    flash('Document request marked as completed.', 'success')
+    return redirect(url_for('receptionist_document_requests'))
+
+@app.route('/receptionist/documents/<int:doc_id>/delete', methods=['POST'])
+def receptionist_delete_document(doc_id):
+    if session.get('role') != 'receptionist':
+        return redirect(url_for('staff_login'))
+    doc = DocumentRequest.query.get_or_404(doc_id)
+    db.session.delete(doc)
+    db.session.commit()
+    flash('Request deleted.', 'success')
+    return redirect(url_for('receptionist_document_requests'))
+
+# ── MAIL & PACKAGES ──
+@app.route('/receptionist/mail')
+def receptionist_mail():
+    if session.get('role') != 'receptionist':
+        return redirect(url_for('staff_login'))
+    mail_list = MailPackage.query.order_by(MailPackage.created_at.desc()).all()
+    return render_template('receptionist/mail.html',
+        mail_list=mail_list,
+        incoming_count=MailPackage.query.filter_by(mail_type='Incoming').count(),
+        outgoing_count=MailPackage.query.filter_by(mail_type='Outgoing').count(),
+        pending_count=MailPackage.query.filter_by(status='Pending').count())
+
+@app.route('/receptionist/mail/add', methods=['POST'])
+def receptionist_add_mail():
+    if session.get('role') != 'receptionist':
+        return redirect(url_for('staff_login'))
+    db.session.add(MailPackage(
+        mail_type=request.form['mail_type'],
+        party_name=request.form['party_name'],
+        description=request.form['description'],
+        notes=request.form.get('notes', ''),
+        date_recorded=eat_now().strftime('%Y-%m-%d'),
+        recorded_by=session.get('username')
+    ))
+    db.session.commit()
+    flash('Mail recorded successfully!', 'success')
+    return redirect(url_for('receptionist_mail'))
+
+@app.route('/receptionist/mail/<int:mail_id>/collect', methods=['POST'])
+def receptionist_collect_mail(mail_id):
+    if session.get('role') != 'receptionist':
+        return redirect(url_for('staff_login'))
+    mail = MailPackage.query.get_or_404(mail_id)
+    mail.status = 'Collected'
+    db.session.commit()
+    flash('Mail marked as collected.', 'success')
+    return redirect(url_for('receptionist_mail'))
+
+# ── OFFICE SUPPLIES ──
+@app.route('/receptionist/supplies')
+def receptionist_supplies():
+    if session.get('role') != 'receptionist':
+        return redirect(url_for('staff_login'))
+    supplies = OfficeSupply.query.order_by(OfficeSupply.item_name).all()
+    return render_template('receptionist/supplies.html',
+        supplies=supplies,
+        total_items=OfficeSupply.query.count(),
+        low_stock=sum(1 for s in supplies if s.quantity <= s.min_stock))
+
+@app.route('/receptionist/supplies/add', methods=['POST'])
+def receptionist_add_supply():
+    if session.get('role') != 'receptionist':
+        return redirect(url_for('staff_login'))
+    db.session.add(OfficeSupply(
+        item_name=request.form['item_name'],
+        category=request.form.get('category', 'Stationery'),
+        quantity=int(request.form.get('quantity', 0)),
+        unit=request.form.get('unit', 'pcs'),
+        min_stock=int(request.form.get('min_stock', 5))
+    ))
+    db.session.commit()
+    flash('Supply item added!', 'success')
+    return redirect(url_for('receptionist_supplies'))
+
+@app.route('/receptionist/supplies/<int:supply_id>/restock', methods=['POST'])
+def receptionist_restock_supply(supply_id):
+    if session.get('role') != 'receptionist':
+        return redirect(url_for('staff_login'))
+    supply = OfficeSupply.query.get_or_404(supply_id)
+    supply.quantity += int(request.form.get('quantity', 0))
+    db.session.commit()
+    flash(f'{supply.item_name} restocked successfully!', 'success')
+    return redirect(url_for('receptionist_supplies'))
+
+@app.route('/receptionist/supplies/<int:supply_id>/delete', methods=['POST'])
+def receptionist_delete_supply(supply_id):
+    if session.get('role') != 'receptionist':
+        return redirect(url_for('staff_login'))
+    supply = OfficeSupply.query.get_or_404(supply_id)
+    db.session.delete(supply)
+    db.session.commit()
+    flash('Item deleted.', 'success')
+    return redirect(url_for('receptionist_supplies'))
 
 
 # ═══════════════════════════════════════════

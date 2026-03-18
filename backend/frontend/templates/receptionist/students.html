@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Students | Front Office</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
+    <style>
+        .hamburger{display:none;font-size:28px;cursor:pointer;background:none;border:none;color:#003366;padding:4px 8px;}
+        .sidebar-overlay{display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.5);z-index:998;}
+        .sidebar-overlay.open{display:block;}
+        .search-input{flex:1;padding:10px 16px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:0.9rem;outline:none;}
+        @media(max-width:768px){.hamburger{display:block;}.sidebar{position:fixed!important;top:0;left:-280px!important;height:100vh!important;width:260px!important;z-index:999!important;transition:left 0.3s ease;overflow-y:auto;display:block!important;}.sidebar.open{left:0!important;}.main{margin-left:0!important;width:100%!important;}}
+    </style>
+</head>
+<body>
+<div class="sidebar-overlay" id="overlay"></div>
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand"><div class="brand-icon">CMC</div><div><div class="brand-name">Cleveland</div><div class="brand-sub">Medical College</div></div></div>
+    <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="{{ url_for('receptionist_dashboard') }}" class="nav-item"><span class="nav-icon">⊞</span> Dashboard</a>
+        <div class="nav-section-label">Students</div>
+        <a href="{{ url_for('receptionist_students') }}" class="nav-item active"><span class="nav-icon">🎓</span> View Students</a>
+        <a href="{{ url_for('receptionist_student_assistance') }}" class="nav-item"><span class="nav-icon">🤝</span> Student Assistance</a>
+        <div class="nav-section-label">Front Desk</div>
+        <a href="{{ url_for('receptionist_visitor_log') }}" class="nav-item"><span class="nav-icon">👥</span> Visitor Log</a>
+        <a href="{{ url_for('receptionist_appointments') }}" class="nav-item"><span class="nav-icon">📅</span> Appointments</a>
+        <div class="nav-section-label">Documents & Records</div>
+        <a href="{{ url_for('receptionist_document_requests') }}" class="nav-item"><span class="nav-icon">📄</span> Document Requests</a>
+        <a href="{{ url_for('receptionist_mail') }}" class="nav-item"><span class="nav-icon">📦</span> Mail & Packages</a>
+        <a href="{{ url_for('receptionist_supplies') }}" class="nav-item"><span class="nav-icon">🏪</span> Office Supplies</a>
+        <div class="nav-section-label">Communications</div>
+        <a href="{{ url_for('receptionist_announcements') }}" class="nav-item"><span class="nav-icon">📢</span> Announcements</a>
+        <a href="{{ url_for('messages') }}" class="nav-item"><span class="nav-icon">💬</span> Messages</a>
+        <div class="nav-section-label">Account</div>
+        <a href="{{ url_for('receptionist_profile') }}" class="nav-item"><span class="nav-icon">👤</span> My Profile</a>
+        <a href="{{ url_for('settings') }}" class="nav-item"><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ session.get('full_name', session.get('username','R'))[0] }}</div>
+            <div><div class="user-name">{{ session.get('full_name', session.get('username')) }}</div><div class="user-role">Front Office Manager</div></div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+</aside>
+<main class="main">
+    <header class="topbar">
+        <div style="display:flex;align-items:center;gap:10px;">
+            <button class="hamburger" id="hamburger-btn">☰</button>
+            <div><h1 class="page-title">Students</h1><p class="page-subtitle">View all enrolled students</p></div>
+        </div>
+    </header>
+    {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}{% for category, message in messages %}<div class="flash-msg">{{ message }}</div>{% endfor %}{% endif %}{% endwith %}
+    <div class="table-card">
+        <div style="display:flex;gap:12px;margin-bottom:18px;">
+            <input type="text" class="search-input" id="searchInput" placeholder="🔍 Search students..." onkeyup="filterTable()">
+        </div>
+        <table class="data-table" id="studentsTable">
+            <thead><tr><th>Student ID</th><th>Full Name</th><th>Program</th><th>Year</th><th>Phone</th><th>Email</th><th>Balance</th><th>Status</th></tr></thead>
+            <tbody>
+                {% for s in students %}
+                <tr>
+                    <td><strong>{{ s.student_id }}</strong></td>
+                    <td>{{ s.full_name }}</td>
+                    <td>{{ s.program }}</td>
+                    <td>Year {{ s.year }}</td>
+                    <td>{{ s.phone or '—' }}</td>
+                    <td>{{ s.email or '—' }}</td>
+                    <td style="color:{% if s.balance > 0 %}#991b1b{% else %}#166534{% endif %};font-weight:600;">KSh {{ "{:,.0f}".format(s.balance) }}</td>
+                    <td><span class="status status--{{ 'paid' if s.status == 'Active' else 'pending' }}">{{ s.status }}</span></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="8" class="empty-state">No students enrolled yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</main>
+<script>
+var btn=document.getElementById('hamburger-btn'),sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay');
+btn.addEventListener('click',function(){sidebar.classList.toggle('open');overlay.classList.toggle('open');});
+overlay.addEventListener('click',function(){sidebar.classList.remove('open');overlay.classList.remove('open');});
+function filterTable(){var q=document.getElementById('searchInput').value.toLowerCase();document.querySelectorAll('#studentsTable tbody tr').forEach(function(r){r.style.display=r.textContent.toLowerCase().includes(q)?'':'none';});}
+</script>
+</body></html>

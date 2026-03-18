@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Announcements | Front Office</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
+    <style>
+        .hamburger{display:none;font-size:28px;cursor:pointer;background:none;border:none;color:#003366;padding:4px 8px;}
+        .sidebar-overlay{display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.5);z-index:998;}
+        .sidebar-overlay.open{display:block;}
+        .ann-card{background:white;border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.06);margin-bottom:16px;border-left:4px solid var(--navy);}
+        .ann-card.urgent{border-left-color:#c0392b;}
+        .ann-card.high{border-left-color:#f39c12;}
+        .ann-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+        .ann-title{font-family:'Playfair Display',serif;font-size:1rem;color:var(--navy);}
+        .ann-meta{font-size:0.75rem;color:var(--muted);}
+        .ann-body{font-size:0.875rem;color:var(--text);line-height:1.6;}
+        @media(max-width:768px){.hamburger{display:block;}.sidebar{position:fixed!important;top:0;left:-280px!important;height:100vh!important;width:260px!important;z-index:999!important;transition:left 0.3s ease;overflow-y:auto;display:block!important;}.sidebar.open{left:0!important;}.main{margin-left:0!important;width:100%!important;}}
+    </style>
+</head>
+<body>
+<div class="sidebar-overlay" id="overlay"></div>
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand"><div class="brand-icon">CMC</div><div><div class="brand-name">Cleveland</div><div class="brand-sub">Medical College</div></div></div>
+    <nav class="sidebar-nav">
+        <div class="nav-section-label">Main</div>
+        <a href="{{ url_for('receptionist_dashboard') }}" class="nav-item"><span class="nav-icon">⊞</span> Dashboard</a>
+        <div class="nav-section-label">Students</div>
+        <a href="{{ url_for('receptionist_students') }}" class="nav-item"><span class="nav-icon">🎓</span> View Students</a>
+        <a href="{{ url_for('receptionist_student_assistance') }}" class="nav-item"><span class="nav-icon">🤝</span> Student Assistance</a>
+        <div class="nav-section-label">Front Desk</div>
+        <a href="{{ url_for('receptionist_visitor_log') }}" class="nav-item"><span class="nav-icon">👥</span> Visitor Log</a>
+        <a href="{{ url_for('receptionist_appointments') }}" class="nav-item"><span class="nav-icon">📅</span> Appointments</a>
+        <div class="nav-section-label">Documents & Records</div>
+        <a href="{{ url_for('receptionist_document_requests') }}" class="nav-item"><span class="nav-icon">📄</span> Document Requests</a>
+        <a href="{{ url_for('receptionist_mail') }}" class="nav-item"><span class="nav-icon">📦</span> Mail & Packages</a>
+        <a href="{{ url_for('receptionist_supplies') }}" class="nav-item"><span class="nav-icon">🏪</span> Office Supplies</a>
+        <div class="nav-section-label">Communications</div>
+        <a href="{{ url_for('receptionist_announcements') }}" class="nav-item active"><span class="nav-icon">📢</span> Announcements</a>
+        <a href="{{ url_for('messages') }}" class="nav-item"><span class="nav-icon">💬</span> Messages</a>
+        <div class="nav-section-label">Account</div>
+        <a href="{{ url_for('receptionist_profile') }}" class="nav-item"><span class="nav-icon">👤</span> My Profile</a>
+        <a href="{{ url_for('settings') }}" class="nav-item"><span class="nav-icon">⚙️</span> Settings</a>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ session.get('full_name', session.get('username','R'))[0] }}</div>
+            <div><div class="user-name">{{ session.get('full_name', session.get('username')) }}</div><div class="user-role">Front Office Manager</div></div>
+        </div>
+        <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+    </div>
+</aside>
+<main class="main">
+    <header class="topbar">
+        <div style="display:flex;align-items:center;gap:10px;">
+            <button class="hamburger" id="hamburger-btn">☰</button>
+            <div><h1 class="page-title">Announcements</h1><p class="page-subtitle">All announcements from administration</p></div>
+        </div>
+    </header>
+    <div style="padding:20px;">
+        {% for ann in announcements %}
+        <div class="ann-card {{ 'urgent' if ann.priority == 'Urgent' else 'high' if ann.priority == 'High' else '' }}">
+            <div class="ann-header">
+                <div class="ann-title">📢 {{ ann.title }}</div>
+                <div class="ann-meta">{{ ann.date }} · {{ ann.audience }} · <strong>{{ ann.priority }}</strong></div>
+            </div>
+            <div class="ann-body">{{ ann.message }}</div>
+            <div style="margin-top:8px;font-size:0.75rem;color:var(--muted);">Posted by: {{ ann.posted_by }}</div>
+        </div>
+        {% else %}
+        <div class="empty-state" style="padding:40px;text-align:center;">No announcements yet.</div>
+        {% endfor %}
+    </div>
+</main>
+<script>
+var btn=document.getElementById('hamburger-btn'),sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay');
+btn.addEventListener('click',function(){sidebar.classList.toggle('open');overlay.classList.toggle('open');});
+overlay.addEventListener('click',function(){sidebar.classList.remove('open');overlay.classList.remove('open');});
+</script>
+</body></html>
