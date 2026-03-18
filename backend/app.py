@@ -841,7 +841,7 @@ def reports():
 
 @app.route('/settings')
 def settings():
-    if session.get('role') not in ['admin', 'finance', 'front_office', 'receptionist']:
+    if session.get('role') not in ['admin', 'finance', 'front_office']:
         flash('Access denied.')
         return redirect(url_for('staff_login'))
     return render_template('settings.html',
@@ -881,6 +881,9 @@ def change_password():
         staff.password = new_pw
         db.session.commit()
         flash('Password changed successfully.', 'success')
+    # Redirect to correct settings page based on role
+    if session.get('role') == 'receptionist':
+        return redirect(url_for('receptionist_settings'))
     return redirect(url_for('settings'))
 
 @app.route('/settings/clear-transactions', methods=['POST'])
@@ -1443,6 +1446,13 @@ def receptionist_announcements():
         announcements=Announcement.query.filter(
             Announcement.audience.in_(['All', 'Staff'])
         ).order_by(Announcement.id.desc()).all())
+
+@app.route('/receptionist/settings')
+def receptionist_settings():
+    if session.get('role') != 'receptionist':
+        flash('Access denied.')
+        return redirect(url_for('staff_login'))
+    return render_template('receptionist/settings.html')
 
 @app.route('/receptionist/profile')
 def receptionist_profile():
