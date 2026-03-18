@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Staff Login | C.M.C</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/staff_login.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
 </head>
 <body>
 
@@ -31,28 +30,26 @@
             {% endif %}
         {% endwith %}
 
-        <!-- FIX 1: added method="POST" and action -->
         <form method="POST" action="{{ url_for('staff_login') }}">
 
             <div class="form-group">
                 <label for="username">Staff ID / Email</label>
-                <!-- FIX 2: added name="username" -->
                 <input type="text" id="username" name="username" placeholder="e.g. CMC-12345" required>
             </div>
 
             <div class="form-group">
                 <label for="password">Password</label>
-                <!-- FIX 3: added name="password" -->
                 <input type="password" id="password" name="password" placeholder="••••••••" required>
             </div>
 
-            <div class="input-group" style="margin-top: 15px;">
+            <div class="input-group" style="margin-top:15px;">
                 <label style="font-size:0.8rem; font-weight:bold; color:#003366;">ACCESS LEVEL</label>
                 <select name="role" required style="width:100%; padding:12px; border:1px solid #cbd6e2; border-radius:4px; background:white;">
                     <option value="" disabled selected>Select your role...</option>
                     <option value="admin">System Administrator</option>
                     <option value="finance">Finance Office</option>
-                    <option value="front_office">Front Office Manager</option>
+                    <option value="front_office">Lecturer</option>
+                    <option value="receptionist">Front Office Manager</option>
                 </select>
             </div>
 

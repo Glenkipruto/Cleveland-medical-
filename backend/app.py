@@ -13,12 +13,11 @@ def eat_now():
 app = Flask(
     __name__,
     template_folder="frontend/templates",
-static_folder="frontend/static"
+    static_folder="frontend/static"
 )
 
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'cleveland-secret-key-2024')
 
-# ── DATABASE: PostgreSQL on Railway, SQLite locally ──
 database_url = os.environ.get('DATABASE_URL', 'sqlite:///cleveland.db')
 if database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
@@ -31,8 +30,8 @@ db = SQLAlchemy(app)
 def inject_unread():
     if session.get('username'):
         unread = Message.query.filter_by(
-            receiver_id = session.get('username'),
-            is_read     = False
+            receiver_id=session.get('username'),
+            is_read=False
         ).count()
         return {'unread_messages': unread}
     return {'unread_messages': 0}
@@ -330,7 +329,6 @@ class Message(db.Model):
 with app.app_context():
     db.create_all()
 
-    # SQLite-only migration for extra staff columns
     if 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
         with db.engine.connect() as conn:
             for col, coltype in [
@@ -348,7 +346,6 @@ with app.app_context():
                 except:
                     print(f'⏭️ Skipped {col}: already exists')
 
-    # Auto-create default admin if none exists
     try:
         existing_admin = Staff.query.filter_by(staff_id='CMC-ADMIN-01').first()
         if not existing_admin:
@@ -399,6 +396,8 @@ def staff_login():
                 return redirect(url_for('finance_dashboard'))
             elif staff.role == 'front_office':
                 return redirect(url_for('front_office_dashboard'))
+            elif staff.role == 'receptionist':
+                return redirect(url_for('receptionist_dashboard'))
         else:
             flash('Invalid credentials or role mismatch. Please try again.')
     return render_template("staff_login.html")
@@ -485,7 +484,7 @@ def delete_staff(staff_id):
 
 @app.route('/students')
 def students():
-    if session.get('role') not in ['admin', 'front_office']:
+    if session.get('role') not in ['admin', 'front_office', 'receptionist']:
         flash('Access denied.')
         return redirect(url_for('staff_login'))
     return render_template('students.html', students=Student.query.order_by(Student.id.desc()).all())
@@ -493,6 +492,7 @@ def students():
 @app.route('/students/add', methods=['POST'])
 def add_student():
     if session.get('role') not in ['admin', 'front_office']:
+        flash('Access denied.')
         return redirect(url_for('staff_login'))
     first_name  = request.form.get('first_name')
     last_name   = request.form.get('last_name')
@@ -515,7 +515,7 @@ def add_student():
 
 @app.route('/students/<int:student_id>')
 def student_profile(student_id):
-    if session.get('role') not in ['admin', 'front_office']:
+    if session.get('role') not in ['admin', 'front_office', 'receptionist']:
         return redirect(url_for('staff_login'))
     return render_template('student_profile.html',
         student=Student.query.get_or_404(student_id),
@@ -780,7 +780,7 @@ def reports():
 
 @app.route('/settings')
 def settings():
-    if session.get('role') not in ['admin', 'finance', 'front_office']:
+    if session.get('role') not in ['admin', 'finance', 'front_office', 'receptionist']:
         flash('Access denied.')
         return redirect(url_for('staff_login'))
     return render_template('settings.html',
@@ -1197,7 +1197,7 @@ def finance_reports():
 
 
 # ═══════════════════════════════════════════
-# FRONT OFFICE / STAFF DASHBOARD
+# LECTURER (front_office) DASHBOARD
 # ═══════════════════════════════════════════
 
 import calendar as cal
@@ -1328,6 +1328,77 @@ def update_staff_profile():
 
 
 # ═══════════════════════════════════════════
+# RECEPTIONIST (Front Office Manager) DASHBOARD
+# ═══════════════════════════════════════════
+
+@app.route('/receptionist-dashboard')
+def receptionist_dashboard():
+    if session.get('role') != 'receptionist':
+        flash('Access denied.')
+        return redirect(url_for('staff_login'))
+    staff = get_staff()
+    announcements = Announcement.query.filter(
+        Announcement.audience.in_(['All', 'Staff'])
+    ).order_by(Announcement.id.desc()).limit(5).all()
+    return render_template('receptionist/dashboard.html',
+        staff=staff,
+        total_students=Student.query.count(),
+        active_students=Student.query.filter_by(status='Active').count(),
+        total_announcements=Announcement.query.count(),
+        announcements=announcements,
+        recent_students=Student.query.order_by(Student.id.desc()).limit(5).all())
+
+@app.route('/receptionist/students')
+def receptionist_students():
+    if session.get('role') != 'receptionist':
+        flash('Access denied.')
+        return redirect(url_for('staff_login'))
+    return render_template('receptionist/students.html',
+        students=Student.query.order_by(Student.id.desc()).all())
+
+@app.route('/receptionist/students/<int:student_id>')
+def receptionist_student_profile(student_id):
+    if session.get('role') != 'receptionist':
+        return redirect(url_for('staff_login'))
+    return render_template('receptionist/student_profile.html',
+        student=Student.query.get_or_404(student_id))
+
+@app.route('/receptionist/announcements')
+def receptionist_announcements():
+    if session.get('role') != 'receptionist':
+        flash('Access denied.')
+        return redirect(url_for('staff_login'))
+    return render_template('receptionist/announcements.html',
+        announcements=Announcement.query.filter(
+            Announcement.audience.in_(['All', 'Staff'])
+        ).order_by(Announcement.id.desc()).all())
+
+@app.route('/receptionist/profile')
+def receptionist_profile():
+    if session.get('role') != 'receptionist':
+        return redirect(url_for('staff_login'))
+    return render_template('receptionist/profile.html', staff=get_staff())
+
+@app.route('/receptionist/profile/update', methods=['POST'])
+def update_receptionist_profile():
+    if session.get('role') != 'receptionist':
+        return redirect(url_for('staff_login'))
+    staff = get_staff()
+    if staff:
+        staff.full_name = request.form.get('full_name', '')
+        staff.phone     = request.form.get('phone', '')
+        new_email       = request.form.get('email', '')
+        if Staff.query.filter(Staff.email == new_email, Staff.id != staff.id).first():
+            flash('That email is already in use.', 'error')
+        else:
+            staff.email = new_email
+            session['full_name'] = staff.full_name or staff.staff_id
+            db.session.commit()
+            flash('Profile updated successfully!', 'success')
+    return redirect(url_for('receptionist_profile'))
+
+
+# ═══════════════════════════════════════════
 # MESSAGES
 # ═══════════════════════════════════════════
 
@@ -1343,9 +1414,9 @@ def messages():
     auto_to  = request.args.get('to', '')
     if role == 'admin':
         contacts = Staff.query.filter(
-            Staff.role.in_(['finance', 'front_office']),
+            Staff.role.in_(['finance', 'front_office', 'receptionist']),
             Staff.staff_id != username).all()
-    elif role in ['finance', 'front_office']:
+    elif role in ['finance', 'front_office', 'receptionist']:
         contacts = Staff.query.filter_by(role='admin').all()
     else:
         contacts = []
